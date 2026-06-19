@@ -1,0 +1,7 @@
+name = "home-flow"
+compatibility_date = "2026-06-19"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "home-flow-db"
+database_id = "placeholder"
