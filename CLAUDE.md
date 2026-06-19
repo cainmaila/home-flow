@@ -60,6 +60,31 @@ For multi-step tasks, state a brief plan:
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
+## 5. Dispatchable, Resumable Tasks
+
+**Single source of state. Each task self-contained. Progress survives interruption.**
+
+`docs/STATUS.md` is the state source. Every task is one checklist line:
+
+```
+- [ ] T<里程碑>.<序號> <標題>  | 依賴: T.. | 狀態: todo|wip|done|blocked
+      驗收: <一句可機械驗證的門檻>
+```
+
+Working a task:
+- Read only: the plan section + the task's dependency outputs + the relevant `docs/prd/*` section.
+- Mark `wip` when you start, `done` only when the 驗收 gate passes, `blocked` (with reason) when stuck.
+- Every `done` leaves a re-runnable check: reproducible migration, runnable test, or one curl/command.
+- Update the STATUS.md line and commit it with the work.
+
+Rules:
+- No shared uncommitted state across tasks. An interrupted task stops at `wip`; the next hand-off resumes from that line.
+- Don't start a task whose 依賴 are not `done`.
+- Close a milestone only when all its 驗收 gates are green, then mark the milestone段落 `done`.
+- New work that isn't in STATUS.md → add the line first, then do it.
+
+Plan of record: `/Users/cain/.claude/plans/delegated-inventing-wind.md`.
+
 ---
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
