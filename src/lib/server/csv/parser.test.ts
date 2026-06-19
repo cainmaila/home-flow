@@ -4,6 +4,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseCSV, _parseCSVRow, _parseMDDate, _parseAmount } from './parser';
 import { parseAndValidate } from './validator';
+import { normalizeRecords } from './normalize';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -169,5 +170,170 @@ describe('edge cases', () => {
 	it('handles empty CSV', () => {
 		const result = parseAndValidate('', 2026);
 		expect(result.records).toHaveLength(0);
+	});
+});
+
+// --- T2.3: Column Semantic Recognition ---
+
+/** Helper: build a transposed CSV from a simple spec */
+function buildCSV(dates: string[], rows: { category: string; amounts: (number | null)[] }[]): string {
+	const junkRow = '';
+	const headerRow = ['', ...dates, ''].join(',');
+	const dataRows = rows.map((r) => {
+		const total = r.amounts.reduce((s: number, a) => s + (a ?? 0), 0);
+		const cells = r.amounts.map((a) => (a === null ? '' : String(a)));
+		return [r.category, ...cells, String(total)].join(',');
+	});
+	return [junkRow, headerRow, ...dataRows, '合計'].join('\n');
+}
+
+describe('T2.3: variable-shape CSV tolerance', () => {
+	it('parses a CSV with fewer date columns', () => {
+		const csv = buildCSV(['1/1', '1/2', '1/3'], [
+			{ category: '午餐', amounts: [100, 200, null] },
+			{ category: '晚餐', amounts: [null, 150, 300] }
+		]);
+		const result = parseCSV(csv, 2026);
+
+		expect(result.dateHeaders).toHaveLength(3);
+		expect(result.dateHeaders).toEqual(['2026-01-01', '2026-01-02', '2026-01-03']);
+		expect(result.records).toHaveLength(4); // 午餐: 100,200; 晚餐: 150,300
+	});
+
+	it('parses a CSV with more date columns', () => {
+		const dates = Array.from({ length: 7 }, (_, i) => `3/${i + 1}`);
+		const csv = buildCSV(dates, [
+			{ category: '早餐', amounts: [50, null, 60, null, 70, null, 80] },
+			{ category: '交通', amounts: [null, 100, null, 100, null, 100, null] }
+		]);
+		const result = parseCSV(csv, 2026);
+
+		expect(result.dateHeaders).toHaveLength(7);
+		expect(result.records).toHaveLength(7); // 4 breakfast + 3 transport
+	});
+
+	it('parses a CSV with different category names and row counts', () => {
+		const csv = buildCSV(['7/10', '7/11'], [
+			{ category: '咖啡', amounts: [65, 70] },
+			{ category: '書籍', amounts: [350, null] },
+			{ category: '固-網路', amounts: [null, 499] },
+			{ category: '保險', amounts: [null, 2000] }
+		]);
+		const result = parseCSV(csv, 2026);
+
+		expect(result.dateHeaders).toHaveLength(2);
+		const categories = [...new Set(result.records.map((r) => r.raw_category))];
+		expect(categories).toContain('咖啡');
+		expect(categories).toContain('書籍');
+		expect(categories).toContain('固-網路');
+		expect(categories).toContain('保險');
+		expect(result.records).toHaveLength(5); // 2+1+1+1
+	});
+
+	it('handles a single-date, single-category CSV', () => {
+		const csv = buildCSV(['12/25'], [{ category: '禮物', amounts: [500] }]);
+		const result = parseCSV(csv, 2025);
+
+		expect(result.dateHeaders).toEqual(['2025-12-25']);
+		expect(result.records).toHaveLength(1);
+		expect(result.records[0]).toEqual({
+			expense_date: '2025-12-25',
+			raw_category: '禮物',
+			amount: 500
+		});
+	});
+
+	it('cross-validates totals on variable-shape CSV', () => {
+		const csv = buildCSV(['2/1', '2/2'], [
+			{ category: '飲料', amounts: [45, 55] }
+		]);
+		const result = parseCSV(csv, 2026);
+		const totals = result.categoryTotals.get('飲料');
+		expect(totals).toEqual({ declared: 100, computed: 100 });
+	});
+});
+
+// --- T2.4: Standardize to Expense Model ---
+
+describe('T2.4: normalizeRecords', () => {
+	it('maps ParsedRecords to ExpenseRecords', () => {
+		const parsed = [
+			{ expense_date: '2026-06-01', raw_category: '午餐', amount: 200 },
+			{ expense_date: '2026-06-01', raw_category: '晚餐', amount: 350 }
+		];
+		const records = normalizeRecords(parsed, 'hh-1');
+
+		expect(records).toHaveLength(2);
+		expect(records[0]).toEqual({
+			household_id: 'hh-1',
+			expense_date: '2026-06-01',
+			raw_category: '午餐',
+			normalized_category: null,
+			amount: 200,
+			is_fixed_expense: false,
+			source_import_id: null
+		});
+	});
+
+	it('sets is_fixed_expense for 固- prefix', () => {
+		const parsed = [
+			{ expense_date: '2026-06-01', raw_category: '固-瓦斯640', amount: 640 },
+			{ expense_date: '2026-06-01', raw_category: '固-網路', amount: 499 }
+		];
+		const records = normalizeRecords(parsed, 'hh-1');
+
+		expect(records[0].is_fixed_expense).toBe(true);
+		expect(records[1].is_fixed_expense).toBe(true);
+	});
+
+	it('sets is_fixed_expense for known bill categories', () => {
+		const billCategories = ['瓦斯', '水', '電', '保險', '貸款', '訂閱'];
+		for (const cat of billCategories) {
+			const records = normalizeRecords(
+				[{ expense_date: '2026-01-01', raw_category: cat, amount: 100 }],
+				'hh-1'
+			);
+			expect(records[0].is_fixed_expense).toBe(true);
+		}
+	});
+
+	it('does not set is_fixed_expense for regular categories', () => {
+		const regularCategories = ['午餐', '晚餐', '交通', '醫療', '飲料'];
+		for (const cat of regularCategories) {
+			const records = normalizeRecords(
+				[{ expense_date: '2026-01-01', raw_category: cat, amount: 100 }],
+				'hh-1'
+			);
+			expect(records[0].is_fixed_expense).toBe(false);
+		}
+	});
+
+	it('sets normalized_category to null and source_import_id to null', () => {
+		const records = normalizeRecords(
+			[{ expense_date: '2026-06-01', raw_category: '午餐', amount: 100 }],
+			'hh-1'
+		);
+		expect(records[0].normalized_category).toBeNull();
+		expect(records[0].source_import_id).toBeNull();
+	});
+
+	it('works with real parser output', () => {
+		const result = parseCSV(sampleCSV, 2026);
+		const records = normalizeRecords(result.records, 'test-household');
+
+		expect(records).toHaveLength(145);
+
+		// All records should have the household_id
+		expect(records.every((r) => r.household_id === 'test-household')).toBe(true);
+
+		// 固-瓦斯640 should be fixed
+		const gas = records.find((r) => r.raw_category === '固-瓦斯640');
+		expect(gas).toBeDefined();
+		expect(gas!.is_fixed_expense).toBe(true);
+
+		// 午餐 should not be fixed
+		const lunch = records.find((r) => r.raw_category === '午餐');
+		expect(lunch).toBeDefined();
+		expect(lunch!.is_fixed_expense).toBe(false);
 	});
 });

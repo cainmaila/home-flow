@@ -31,9 +31,9 @@
       驗收: >10MB 被前端拒絕
 - [x] T2.2 CSV parser | 依賴: T2.1 | 狀態: done
       驗收: 能解出 `docs/費用.csv` 全部有效儲存格；用末欄合計交叉驗證
-- [ ] T2.3 欄位語意辨識 | 依賴: T2.2 | 狀態: todo
+- [x] T2.3 欄位語意辨識 | 依賴: T2.2 | 狀態: done
       驗收: 相近格式樣本仍可解析
-- [ ] T2.4 標準化為 expense 模型 | 依賴: T2.3 | 狀態: todo
+- [x] T2.4 標準化為 expense 模型 | 依賴: T2.3 | 狀態: done
       驗收: 產出符合 schema 的列
 - [ ] T2.5 preview→commit + 增量合併 | 依賴: T2.4 | 狀態: todo
       驗收: 同檔重匯 inserted=0、duplicate=全部；改一格金額重匯出現 1 筆更新候選
