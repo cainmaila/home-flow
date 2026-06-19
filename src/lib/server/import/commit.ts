@@ -1,4 +1,5 @@
 import type { PreviewRecord } from './preview';
+import { resolveCategoriesForImport } from '../category/resolve';
 
 export interface CommitResult {
 	importId: string;
@@ -6,6 +7,7 @@ export interface CommitResult {
 	duplicates: number;
 	updated: number;
 	skipped: number;
+	categoryResolution?: { resolved: number; pending: number };
 }
 
 /**
@@ -92,5 +94,8 @@ export async function commitImport(
 		.bind(inserted, duplicates, updated, skipped, importId)
 		.run();
 
-	return { importId, inserted, duplicates, updated, skipped };
+	// Apply category resolution to newly imported expenses (T3.5)
+	const categoryResolution = await resolveCategoriesForImport(db, householdId, importId);
+
+	return { importId, inserted, duplicates, updated, skipped, categoryResolution };
 }
