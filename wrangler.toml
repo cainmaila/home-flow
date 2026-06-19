@@ -1,8 +1,9 @@
 name = "home-flow"
 compatibility_date = "2026-06-19"
+pages_build_output_dir = ".svelte-kit/cloudflare"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "home-flow-db"
-database_id = "placeholder"
+database_id = "a1247d7a-a9a5-44eb-b773-33ce86222a17"
 migrations_dir = "migrations"
