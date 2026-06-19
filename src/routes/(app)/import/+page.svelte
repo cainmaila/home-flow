@@ -208,39 +208,41 @@
 
 			{#if previewResult.records.some((r) => r.status === 'update')}
 				<h3>更新候選</h3>
-				<table>
-					<thead>
-						<tr>
-							<th>日期</th>
-							<th>分類</th>
-							<th>舊金額</th>
-							<th>新金額</th>
-							<th>處理方式</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each previewResult.records as pr, i}
-							{#if pr.status === 'update'}
-								<tr>
-									<td>{pr.record.expense_date}</td>
-									<td>{pr.record.raw_category}</td>
-									<td>{pr.existingAmount}</td>
-									<td>{pr.record.amount}</td>
-									<td>
-										<select
-											value={pr.resolution ?? 'use_new'}
-											onchange={(e) => setResolution(i, (e.target as HTMLSelectElement).value as 'use_new' | 'keep_old' | 'skip')}
-										>
-											<option value="use_new">使用新值</option>
-											<option value="keep_old">保留舊值</option>
-											<option value="skip">略過</option>
-										</select>
-									</td>
-								</tr>
-							{/if}
-						{/each}
-					</tbody>
-				</table>
+				<div class="table-scroll">
+					<table>
+						<thead>
+							<tr>
+								<th>日期</th>
+								<th>分類</th>
+								<th>舊金額</th>
+								<th>新金額</th>
+								<th>處理方式</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each previewResult.records as pr, i}
+								{#if pr.status === 'update'}
+									<tr>
+										<td>{pr.record.expense_date}</td>
+										<td>{pr.record.raw_category}</td>
+										<td>{pr.existingAmount}</td>
+										<td>{pr.record.amount}</td>
+										<td>
+											<select
+												value={pr.resolution ?? 'use_new'}
+												onchange={(e) => setResolution(i, (e.target as HTMLSelectElement).value as 'use_new' | 'keep_old' | 'skip')}
+											>
+												<option value="use_new">使用新值</option>
+												<option value="keep_old">保留舊值</option>
+												<option value="skip">略過</option>
+											</select>
+										</td>
+									</tr>
+								{/if}
+							{/each}
+						</tbody>
+					</table>
+				</div>
 			{/if}
 
 			{#if previewResult.records.some((r) => r.status === 'new')}
@@ -305,14 +307,12 @@
 		{/if}
 	{/if}
 
-	<p class="nav-link"><a href="/import/history">匯入歷程</a></p>
 </div>
 
 <style>
 	.import-page {
 		max-width: 700px;
-		margin: 40px auto;
-		padding: 0 1rem;
+		margin: 0 auto;
 		font-family: system-ui, sans-serif;
 	}
 
@@ -386,6 +386,10 @@
 		font-weight: 600;
 	}
 
+	.table-scroll {
+		overflow-x: auto;
+	}
+
 	table {
 		width: 100%;
 		border-collapse: collapse;
@@ -397,6 +401,7 @@
 		border: 1px solid #ddd;
 		padding: 0.3rem 0.5rem;
 		text-align: left;
+		white-space: nowrap;
 	}
 
 	th {
@@ -413,14 +418,5 @@
 
 	.commit-result {
 		margin-top: 1rem;
-	}
-
-	.nav-link {
-		margin-top: 2rem;
-		font-size: 0.9rem;
-	}
-
-	.nav-link a {
-		color: #0066cc;
 	}
 </style>

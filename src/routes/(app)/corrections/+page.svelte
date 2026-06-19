@@ -104,28 +104,30 @@
 			{#if pending.length === 0}
 				<p>所有分類皆已映射。</p>
 			{:else}
-				<table>
-					<thead>
-						<tr>
-							<th>原始分類</th>
-							<th>筆數</th>
-							<th>操作</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each pending as item}
+				<div class="table-scroll">
+					<table>
+						<thead>
 							<tr>
-								<td>{item.raw_category}</td>
-								<td>{item.count}</td>
-								<td>
-									<button onclick={() => handlePendingMap(item.raw_category)}>
-										建立映射
-									</button>
-								</td>
+								<th>原始分類</th>
+								<th>筆數</th>
+								<th>操作</th>
 							</tr>
-						{/each}
-					</tbody>
-				</table>
+						</thead>
+						<tbody>
+							{#each pending as item}
+								<tr>
+									<td>{item.raw_category}</td>
+									<td>{item.count}</td>
+									<td>
+										<button onclick={() => handlePendingMap(item.raw_category)}>
+											建立映射
+										</button>
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
 			{/if}
 		</section>
 
@@ -161,38 +163,38 @@
 			{#if aliases.length === 0}
 				<p>尚無映射規則。</p>
 			{:else}
-				<table>
-					<thead>
-						<tr>
-							<th>原始分類</th>
-							<th>標準分類</th>
-							<th>來源</th>
-							<th>建立時間</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each aliases as alias}
+				<div class="table-scroll">
+					<table>
+						<thead>
 							<tr>
-								<td>{alias.raw_category}</td>
-								<td>{alias.normalized_category}</td>
-								<td>{alias.source === 'manual' ? '人工' : 'AI 自動'}</td>
-								<td>{alias.created_at}</td>
+								<th>原始分類</th>
+								<th>標準分類</th>
+								<th>來源</th>
+								<th>建立時間</th>
 							</tr>
-						{/each}
-					</tbody>
-				</table>
+						</thead>
+						<tbody>
+							{#each aliases as alias}
+								<tr>
+									<td>{alias.raw_category}</td>
+									<td>{alias.normalized_category}</td>
+									<td>{alias.source === 'manual' ? '人工' : 'AI 自動'}</td>
+									<td>{alias.created_at}</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
 			{/if}
 		</section>
 	{/if}
 
-	<p class="nav-link"><a href="/import">返回匯入</a></p>
 </div>
 
 <style>
 	.corrections-page {
 		max-width: 800px;
-		margin: 40px auto;
-		padding: 0 1rem;
+		margin: 0 auto;
 		font-family: system-ui, sans-serif;
 	}
 
@@ -211,6 +213,10 @@
 		border-radius: 4px;
 	}
 
+	.table-scroll {
+		overflow-x: auto;
+	}
+
 	table {
 		width: 100%;
 		border-collapse: collapse;
@@ -222,6 +228,7 @@
 		border: 1px solid #ddd;
 		padding: 0.4rem 0.6rem;
 		text-align: left;
+		white-space: nowrap;
 	}
 
 	th {
@@ -248,12 +255,14 @@
 		gap: 0.25rem;
 		font-weight: 600;
 		font-size: 0.9rem;
+		min-width: 0;
 	}
 
 	.form-row input,
 	.form-row select {
 		padding: 0.3rem 0.5rem;
 		font-size: 0.9rem;
+		max-width: 100%;
 	}
 
 	button {
@@ -266,12 +275,19 @@
 		cursor: not-allowed;
 	}
 
-	.nav-link {
-		margin-top: 2rem;
-		font-size: 0.9rem;
-	}
+	@media (max-width: 640px) {
+		.form-row {
+			flex-direction: column;
+			align-items: stretch;
+		}
 
-	.nav-link a {
-		color: #0066cc;
+		.form-row label {
+			width: 100%;
+		}
+
+		.form-row input,
+		.form-row select {
+			width: 100%;
+		}
 	}
 </style>

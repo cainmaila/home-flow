@@ -197,52 +197,52 @@
 		</div>
 
 		{#if sortedExpenses.length > 0}
-			<table>
-				<thead>
-					<tr>
-						<th class="sortable" onclick={() => handleSort('expense_date')}>
-							日期{sortIndicator('expense_date')}
-						</th>
-						<th class="sortable" onclick={() => handleSort('normalized_category')}>
-							分類{sortIndicator('normalized_category')}
-						</th>
-						<th class="sortable" onclick={() => handleSort('amount')}>
-							金額{sortIndicator('amount')}
-						</th>
-						<th>固定</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each sortedExpenses as exp}
+			<div class="table-scroll">
+				<table>
+					<thead>
 						<tr>
-							<td>{exp.expense_date}</td>
-							<td>{exp.normalized_category}</td>
-							<td class="amount">{formatAmount(exp.amount)}</td>
-							<td>{exp.is_fixed_expense ? '是' : ''}</td>
+							<th class="sortable" onclick={() => handleSort('expense_date')}>
+								日期{sortIndicator('expense_date')}
+							</th>
+							<th class="sortable" onclick={() => handleSort('normalized_category')}>
+								分類{sortIndicator('normalized_category')}
+							</th>
+							<th class="sortable" onclick={() => handleSort('amount')}>
+								金額{sortIndicator('amount')}
+							</th>
+							<th>固定</th>
 						</tr>
-					{/each}
-				</tbody>
-				<tfoot>
-					<tr>
-						<td colspan="2"><strong>合計</strong></td>
-						<td class="amount"><strong>{formatAmount(total)}</strong></td>
-						<td></td>
-					</tr>
-				</tfoot>
-			</table>
+					</thead>
+					<tbody>
+						{#each sortedExpenses as exp}
+							<tr>
+								<td>{exp.expense_date}</td>
+								<td>{exp.normalized_category}</td>
+								<td class="amount">{formatAmount(exp.amount)}</td>
+								<td>{exp.is_fixed_expense ? '是' : ''}</td>
+							</tr>
+						{/each}
+					</tbody>
+					<tfoot>
+						<tr>
+							<td colspan="2"><strong>合計</strong></td>
+							<td class="amount"><strong>{formatAmount(total)}</strong></td>
+							<td></td>
+						</tr>
+					</tfoot>
+				</table>
+			</div>
 		{:else}
 			<p>無符合條件的資料。</p>
 		{/if}
 	{/if}
 
-	<p class="nav-link"><a href="/reports">返回月報表</a></p>
 </div>
 
 <style>
 	.details-page {
 		max-width: 900px;
-		margin: 40px auto;
-		padding: 0 1rem;
+		margin: 0 auto;
 		font-family: system-ui, sans-serif;
 	}
 
@@ -271,12 +271,14 @@
 		gap: 0.25rem;
 		font-weight: 600;
 		font-size: 0.9rem;
+		min-width: 0;
 	}
 
 	.filter-row select,
 	.filter-row input {
 		padding: 0.3rem 0.5rem;
 		font-size: 0.9rem;
+		max-width: 100%;
 	}
 
 	.clear-btn {
@@ -292,6 +294,10 @@
 		font-size: 0.95rem;
 	}
 
+	.table-scroll {
+		overflow-x: auto;
+	}
+
 	table {
 		width: 100%;
 		border-collapse: collapse;
@@ -302,6 +308,7 @@
 		border: 1px solid #ddd;
 		padding: 0.4rem 0.6rem;
 		text-align: left;
+		white-space: nowrap;
 	}
 
 	th {
@@ -331,12 +338,19 @@
 		color: #c00;
 	}
 
-	.nav-link {
-		margin-top: 2rem;
-		font-size: 0.9rem;
-	}
+	@media (max-width: 640px) {
+		.filter-row {
+			flex-direction: column;
+			align-items: stretch;
+		}
 
-	.nav-link a {
-		color: #0066cc;
+		.filter-row label {
+			width: 100%;
+		}
+
+		.filter-row select,
+		.filter-row input {
+			width: 100%;
+		}
 	}
 </style>
