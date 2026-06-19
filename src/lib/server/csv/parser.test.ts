@@ -337,3 +337,56 @@ describe('T2.4: normalizeRecords', () => {
 		expect(lunch!.is_fixed_expense).toBe(false);
 	});
 });
+
+describe('T2.7: error classification', () => {
+	it('bad date header → blocking', () => {
+		const csv = 'junk\n,abc,6/2\n早餐,100,200';
+		const result = parseAndValidate(csv, 2026);
+		const blocking = result.errors.filter((e) => e.severity === 'blocking');
+		expect(blocking.length).toBeGreaterThan(0);
+		expect(blocking[0].message).toContain('Bad date header');
+	});
+
+	it('bad amount → blocking', () => {
+		const csv = 'junk\n,6/1,6/2\n早餐,abc,200';
+		const result = parseAndValidate(csv, 2026);
+		const blocking = result.errors.filter((e) => e.severity === 'blocking');
+		expect(blocking.length).toBeGreaterThan(0);
+		expect(blocking[0].message).toContain('Bad amount');
+	});
+
+	it('empty category → blocking', () => {
+		const csv = 'junk\n,6/1,6/2\n,100,200';
+		const result = parseAndValidate(csv, 2026);
+		const blocking = result.errors.filter((e) => e.severity === 'blocking');
+		expect(blocking.length).toBeGreaterThan(0);
+		expect(blocking[0].message).toContain('Empty category');
+	});
+
+	it('duplicate date header → warning', () => {
+		const csv = 'junk\n,6/1,6/1,6/2\n早餐,100,200,300';
+		const result = parseAndValidate(csv, 2026);
+		const warnings = result.errors.filter((e) => e.severity === 'warning');
+		expect(warnings.some((w) => w.message.includes('Duplicate date'))).toBe(true);
+	});
+
+	it('total mismatch → warning', () => {
+		const csv = 'junk\n,6/1,6/2,total\n早餐,100,200,999';
+		const result = parseAndValidate(csv, 2026);
+		const warnings = result.errors.filter((e) => e.severity === 'warning');
+		expect(warnings.some((w) => w.message.includes('total mismatch'))).toBe(true);
+	});
+
+	it('valid CSV has no blocking errors', () => {
+		const result = parseAndValidate(sampleCSV, 2026);
+		const blocking = result.errors.filter((e) => e.severity === 'blocking');
+		expect(blocking).toHaveLength(0);
+	});
+
+	it('blocking errors prevent record output', () => {
+		const csv = 'junk\n,abc\n早餐,100';
+		const result = parseAndValidate(csv, 2026);
+		expect(result.records).toHaveLength(0);
+		expect(result.errors.some((e) => e.severity === 'blocking')).toBe(true);
+	});
+});
