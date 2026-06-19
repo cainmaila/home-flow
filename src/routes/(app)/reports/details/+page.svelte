@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
+	import { SvelteSet } from 'svelte/reactivity';
 
 	// --- Filter state ---
 	let filterMonth = $state('');
@@ -50,6 +51,11 @@
 	// --- Delete confirm ---
 	let deletingId = $state<string | null>(null);
 
+	// --- Bulk selection ---
+	const selected = new SvelteSet<string>();
+	let bulkCategoryId = $state<number | null>(null);
+	let showBulkDelete = $state(false);
+
 	function formatAmount(cents: number): string {
 		return Math.round(cents).toLocaleString('zh-TW');
 	}
@@ -82,6 +88,7 @@
 	async function search() {
 		loading = true;
 		errorMessage = '';
+		selected.clear();
 
 		const params = new URLSearchParams();
 		if (filterMonth) params.set('month', filterMonth);
@@ -136,6 +143,60 @@
 		});
 		return sorted;
 	});
+
+	let allVisibleSelected = $derived(
+		sortedExpenses.length > 0 && sortedExpenses.every((e) => selected.has(e.id))
+	);
+
+	function toggleSelectAll() {
+		if (allVisibleSelected) selected.clear();
+		else for (const e of sortedExpenses) selected.add(e.id);
+	}
+
+	// ponytail: bulk = loop the single-item API client-side. Add a bulk endpoint only if row counts make N requests slow.
+	async function bulkSetCategory() {
+		if (bulkCategoryId === null || selected.size === 0) return;
+		saving = true;
+		try {
+			const results = await Promise.all(
+				[...selected].map((id) => {
+					const exp = expenses.find((e) => e.id === id);
+					if (!exp) return Promise.resolve(null);
+					return fetch(`/api/expenses/${id}`, {
+						method: 'PUT',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({
+							expense_date: exp.expense_date,
+							amount: exp.amount,
+							category_id: bulkCategoryId,
+							is_fixed_expense: exp.is_fixed_expense
+						})
+					});
+				})
+			);
+			const failed = results.filter((r) => r && !r.ok).length;
+			if (failed) alert(`${failed} 筆套用失敗`);
+			bulkCategoryId = null;
+			await search();
+		} finally {
+			saving = false;
+		}
+	}
+
+	async function bulkDelete() {
+		saving = true;
+		try {
+			const results = await Promise.all(
+				[...selected].map((id) => fetch(`/api/expenses/${id}`, { method: 'DELETE' }))
+			);
+			const failed = results.filter((r) => !r.ok).length;
+			if (failed) alert(`${failed} 筆刪除失敗`);
+			showBulkDelete = false;
+			await search();
+		} finally {
+			saving = false;
+		}
+	}
 
 	function sortIndicator(field: typeof sortField): string {
 		if (sortField !== field) return '';
@@ -290,6 +351,25 @@
 			共 {count} 筆，合計 <strong class="tabular-nums">{formatAmount(total)}</strong>
 		</div>
 
+		{#if selected.size > 0}
+			<div class="flex flex-wrap items-center gap-2 rounded-box bg-base-100 p-3 shadow">
+				<span class="text-sm font-semibold">已選 {selected.size} 筆</span>
+				<select class="select select-bordered select-sm w-44" bind:value={bulkCategoryId}>
+					<option value={null}>選擇分類…</option>
+					{#each categories as group}
+						<optgroup label={group.name}>
+							{#each group.children as child}
+								<option value={child.id}>{child.name}</option>
+							{/each}
+						</optgroup>
+					{/each}
+				</select>
+				<button class="btn btn-primary btn-sm" onclick={bulkSetCategory} disabled={bulkCategoryId === null || saving}>套用分類</button>
+				<button class="btn btn-error btn-sm" onclick={() => (showBulkDelete = true)} disabled={saving}>刪除選取</button>
+				<button class="btn btn-ghost btn-sm" onclick={() => selected.clear()}>清除</button>
+			</div>
+		{/if}
+
 		{#if sortedExpenses.length > 0}
 			<div class="card bg-base-100 shadow">
 				<div class="card-body p-0">
@@ -297,6 +377,9 @@
 						<table class="table table-sm">
 							<thead>
 								<tr>
+									<th class="w-8">
+										<input type="checkbox" class="checkbox checkbox-xs" checked={allVisibleSelected} onchange={toggleSelectAll} aria-label="全選" />
+									</th>
 									<th class="cursor-pointer select-none" onclick={() => handleSort('expense_date')}>
 										日期{sortIndicator('expense_date')}
 									</th>
@@ -314,6 +397,7 @@
 								{#each sortedExpenses as exp}
 									{#if editingId === exp.id}
 										<tr class="bg-base-200 ring-2 ring-primary/40">
+											<td></td>
 											<td>
 												<input type="date" class="input input-bordered input-xs w-36" bind:value={editDate} onkeydown={editKeydown} />
 											</td>
@@ -341,7 +425,10 @@
 											</td>
 										</tr>
 									{:else}
-										<tr class="hover group">
+										<tr class="hover group" class:bg-base-200={selected.has(exp.id)}>
+											<td>
+												<input type="checkbox" class="checkbox checkbox-xs" checked={selected.has(exp.id)} onchange={() => (selected.has(exp.id) ? selected.delete(exp.id) : selected.add(exp.id))} aria-label="選取" />
+											</td>
 											<td>{exp.expense_date}</td>
 											<td>{exp.parent_category_name ? `${exp.parent_category_name} > ` : ''}{exp.normalized_category}</td>
 											<td class="text-right tabular-nums">{formatAmount(exp.amount)}</td>
@@ -358,7 +445,7 @@
 							</tbody>
 							<tfoot>
 								<tr class="font-semibold">
-									<td colspan="2">合計</td>
+									<td colspan="3">合計</td>
 									<td class="text-right tabular-nums">{formatAmount(total)}</td>
 									<td></td>
 									<td></td>
@@ -386,5 +473,20 @@
 			</div>
 		</div>
 		<button type="button" class="modal-backdrop" aria-label="關閉" onclick={() => (deletingId = null)}></button>
+	</div>
+{/if}
+
+<!-- Bulk delete confirm modal -->
+{#if showBulkDelete}
+	<div class="modal modal-open">
+		<div class="modal-box">
+			<h3 class="font-bold text-lg">確認刪除</h3>
+			<p class="py-4">確定要刪除選取的 <strong>{selected.size}</strong> 筆支出嗎？此操作無法復原。</p>
+			<div class="modal-action">
+				<button class="btn btn-ghost" onclick={() => (showBulkDelete = false)}>取消</button>
+				<button class="btn btn-error" onclick={bulkDelete} disabled={saving}>刪除</button>
+			</div>
+		</div>
+		<button type="button" class="modal-backdrop" aria-label="關閉" onclick={() => (showBulkDelete = false)}></button>
 	</div>
 {/if}

@@ -147,7 +147,9 @@ PRD: [docs/prd/Category-Redesign.md](docs/prd/Category-Redesign.md)
       驗收: 月報/明細/分類/校正 spinner 旁顯示「載入中…」
 - [x] T10.5 a11y：導覽 dropdown ARIA + modal backdrop 改 button | 依賴: 無 | 狀態: done
       驗收: dropdown 有 aria-haspopup/label；刪除 modal backdrop 為 button，svelte-check 0 warnings
-- [ ] T10.2 明細/校正批次操作 | 依賴: 無 | 狀態: todo
-      驗收: 多選後可批次套用分類（feature 級，獨立任務）
+- [x] T10.2 明細批次操作 | 依賴: 無 | 狀態: done
+      驗收: 明細表勾選多筆（含全選）後，批次套用分類或批次刪除（confirm）；
+      用 Promise.all 迴圈既有單筆 API（無新後端），失敗計數 alert；功能測試 BULK_OK + 截圖驗證
+      備註: 校正頁 AI 建議批次採納已存在；待確認映射因各 raw 需不同目標分類，批次價值低，暫不做
 - [ ] T10.3 排序指示 icon 化 | 依賴: 無 | 狀態: todo
       驗收: ▲▼ 換清楚 icon
