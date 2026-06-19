@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	const HOUSEHOLD_ID = 'default';
 
 	interface CategoryChild {
@@ -137,6 +138,7 @@
 		addMode = 'child';
 		addParentId = parentId;
 		addName = ''; addIcon = ''; addColor = '';
+		tick().then(() => document.getElementById('add-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
 	}
 </script>
 
@@ -156,7 +158,7 @@
 	{:else}
 		<!-- Add form -->
 		{#if addMode !== 'none'}
-			<div class="card bg-base-100 shadow">
+			<div id="add-form" class="card bg-base-100 shadow">
 				<div class="card-body">
 					<h2 class="card-title text-lg">{addMode === 'parent' ? '新增大類' : '新增子類'}</h2>
 					<div class="flex flex-wrap gap-3 items-end">
