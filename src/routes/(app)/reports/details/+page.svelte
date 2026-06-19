@@ -198,11 +198,6 @@
 		}
 	}
 
-	function sortIndicator(field: typeof sortField): string {
-		if (sortField !== field) return '';
-		return sortAsc ? ' ▲' : ' ▼';
-	}
-
 	function clearFilters() {
 		filterMonth = '';
 		filterDateFrom = '';
@@ -288,6 +283,14 @@
 		await search();
 	});
 </script>
+
+{#snippet sortIcon(field: typeof sortField)}
+	{#if sortField === field}
+		<svg class="inline-block w-3 h-3 align-middle text-primary {sortAsc ? 'rotate-180' : ''}" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+			<path d="M3 4.5 6 7.5 9 4.5" stroke-linecap="round" stroke-linejoin="round" />
+		</svg>
+	{/if}
+{/snippet}
 
 <div class="space-y-6">
 	<h1 class="text-2xl font-bold">支出明細</h1>
@@ -381,13 +384,13 @@
 										<input type="checkbox" class="checkbox checkbox-xs" checked={allVisibleSelected} onchange={toggleSelectAll} aria-label="全選" />
 									</th>
 									<th class="cursor-pointer select-none" onclick={() => handleSort('expense_date')}>
-										日期{sortIndicator('expense_date')}
+										日期 {@render sortIcon('expense_date')}
 									</th>
 									<th class="cursor-pointer select-none" onclick={() => handleSort('normalized_category')}>
-										分類{sortIndicator('normalized_category')}
+										分類 {@render sortIcon('normalized_category')}
 									</th>
 									<th class="cursor-pointer select-none text-right" onclick={() => handleSort('amount')}>
-										金額{sortIndicator('amount')}
+										金額 {@render sortIcon('amount')}
 									</th>
 									<th>固定</th>
 									<th class="w-24"></th>

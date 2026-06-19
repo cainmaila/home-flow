@@ -151,5 +151,5 @@ PRD: [docs/prd/Category-Redesign.md](docs/prd/Category-Redesign.md)
       驗收: 明細表勾選多筆（含全選）後，批次套用分類或批次刪除（confirm）；
       用 Promise.all 迴圈既有單筆 API（無新後端），失敗計數 alert；功能測試 BULK_OK + 截圖驗證
       備註: 校正頁 AI 建議批次採納已存在；待確認映射因各 raw 需不同目標分類，批次價值低，暫不做
-- [ ] T10.3 排序指示 icon 化 | 依賴: 無 | 狀態: todo
-      驗收: ▲▼ 換清楚 icon
+- [x] T10.3 排序指示 icon 化 | 依賴: 無 | 狀態: done
+      驗收: 明細表排序指示由 ASCII ▲▼ 改為 SVG chevron snippet（primary 色、asc 旋轉 180）；截圖驗證
