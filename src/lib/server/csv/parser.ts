@@ -165,5 +165,39 @@ export function parseCSV(csv: string, year: number): ParseResult {
 	return { records, dateHeaders, categoryTotals };
 }
 
+/**
+ * Parse CSV using an AI-provided column mapping.
+ * AI tells us which columns are date, category, amount — we just follow.
+ */
+export function parseCSVWithMapping(
+	csv: string,
+	year: number,
+	mapping: { dateCol: number; categoryCol: number; amountCol: number; headerRow: number }
+): ParseResult {
+	const lines = csv.split(/\r?\n/);
+	const records: ParsedRecord[] = [];
+	const dateSet = new Set<string>();
+
+	for (let i = mapping.headerRow + 1; i < lines.length; i++) {
+		const line = lines[i].trim();
+		if (!line) continue;
+		const cells = parseCSVRow(line);
+
+		const dateStr = cells[mapping.dateCol]?.trim();
+		const category = cells[mapping.categoryCol]?.trim();
+		const amount = parseAmount(cells[mapping.amountCol] ?? '');
+
+		if (!dateStr || !category || amount === null) continue;
+
+		const iso = parseMDDate(dateStr, year);
+		if (!iso) continue;
+
+		dateSet.add(iso);
+		records.push({ expense_date: iso, raw_category: category, amount });
+	}
+
+	return { records, dateHeaders: [...dateSet].sort(), categoryTotals: new Map() };
+}
+
 // Re-export for testing
 export { parseCSVRow as _parseCSVRow, parseMDDate as _parseMDDate, parseAmount as _parseAmount };

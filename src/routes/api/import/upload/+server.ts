@@ -1,11 +1,12 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { requireAdmin } from '$lib/server/auth/guard';
-import { parseAndValidate } from '$lib/server/csv/validator';
+import { parseAndValidateAI } from '$lib/server/csv/validator';
+import { isAIEnabled } from '$lib/server/ai/config';
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 
-export const POST: RequestHandler = async ({ request, locals }) => {
+export const POST: RequestHandler = async ({ request, locals, platform }) => {
 	requireAdmin(locals);
 
 	const formData = await request.formData();
@@ -26,7 +27,11 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	}
 
 	const text = await file.text();
-	const result = parseAndValidate(text, year);
+
+	const env = platform?.env;
+	const apiKey = env && isAIEnabled(env) ? env.GOOGLE_AI_API_KEY : undefined;
+
+	const result = await parseAndValidateAI(text, year, apiKey);
 
 	const hasBlocking = result.errors.some((e) => e.severity === 'blocking');
 
@@ -34,6 +39,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		ok: !hasBlocking,
 		recordCount: result.records.length,
 		records: result.records,
-		errors: result.errors
+		errors: result.errors,
+		format: result.format
 	});
 };

@@ -1,10 +1,12 @@
 import {
 	parseCSV,
+	parseCSVWithMapping,
 	_parseCSVRow as parseCSVRow,
 	_parseMDDate as parseMDDate,
 	type ParsedRecord,
 	type ParseResult
 } from './parser';
+import { analyzeCSVStructure, type CSVMapping } from './ai-analyze';
 
 export type Severity = 'blocking' | 'warning' | 'info';
 
@@ -18,6 +20,61 @@ export interface ParseError {
 export interface ValidationResult {
 	records: ParsedRecord[];
 	errors: ParseError[];
+	format?: 'flat' | 'transposed';
+}
+
+/**
+ * AI-assisted parse: analyze CSV structure with AI, then parse accordingly.
+ * Falls back to legacy transposed parser if AI unavailable.
+ */
+export async function parseAndValidateAI(
+	csv: string,
+	year: number,
+	apiKey?: string
+): Promise<ValidationResult> {
+	let mapping: CSVMapping | null = null;
+
+	if (apiKey) {
+		try {
+			mapping = await analyzeCSVStructure(csv, apiKey);
+		} catch (e) {
+			console.warn('[CSV] AI analysis failed, falling back to legacy parser:', e);
+		}
+	}
+
+	if (mapping?.format === 'flat' && mapping.dateCol !== undefined && mapping.categoryCol !== undefined && mapping.amountCol !== undefined) {
+		return parseAndValidateFlat(csv, year, mapping);
+	}
+
+	// Fallback: legacy transposed parser
+	return parseAndValidate(csv, year);
+}
+
+function parseAndValidateFlat(
+	csv: string,
+	year: number,
+	mapping: CSVMapping
+): ValidationResult {
+	const errors: ParseError[] = [];
+
+	let result: ParseResult;
+	try {
+		result = parseCSVWithMapping(csv, year, {
+			dateCol: mapping.dateCol!,
+			categoryCol: mapping.categoryCol!,
+			amountCol: mapping.amountCol!,
+			headerRow: mapping.headerRow ?? 0
+		});
+	} catch (e) {
+		errors.push({ severity: 'blocking', message: `Parse failed: ${e}` });
+		return { records: [], errors, format: 'flat' };
+	}
+
+	if (result.records.length === 0) {
+		errors.push({ severity: 'warning', message: 'No expense records found' });
+	}
+
+	return { records: result.records, errors, format: 'flat' };
 }
 
 export function parseAndValidate(csv: string, year: number): ValidationResult {
@@ -26,7 +83,7 @@ export function parseAndValidate(csv: string, year: number): ValidationResult {
 	const lines = csv.split(/\r?\n/);
 	if (lines.length < 3) {
 		errors.push({ severity: 'blocking', message: 'CSV has fewer than 3 rows' });
-		return { records: [], errors };
+		return { records: [], errors, format: 'transposed' };
 	}
 
 	// Validate date headers (row 1) before full parse
@@ -74,9 +131,8 @@ export function parseAndValidate(csv: string, year: number): ValidationResult {
 		}
 	}
 
-	// If blocking errors found, skip full parse
 	if (errors.some((e) => e.severity === 'blocking')) {
-		return { records: [], errors };
+		return { records: [], errors, format: 'transposed' };
 	}
 
 	let result: ParseResult;
@@ -84,7 +140,7 @@ export function parseAndValidate(csv: string, year: number): ValidationResult {
 		result = parseCSV(csv, year);
 	} catch (e) {
 		errors.push({ severity: 'blocking', message: `Parse failed: ${e}` });
-		return { records: [], errors };
+		return { records: [], errors, format: 'transposed' };
 	}
 
 	if (result.dateHeaders.length === 0) {
@@ -95,7 +151,6 @@ export function parseAndValidate(csv: string, year: number): ValidationResult {
 		errors.push({ severity: 'warning', message: 'No expense records found' });
 	}
 
-	// Cross-validate row totals
 	for (const [category, { declared, computed }] of result.categoryTotals) {
 		if (declared !== computed) {
 			errors.push({
@@ -105,5 +160,5 @@ export function parseAndValidate(csv: string, year: number): ValidationResult {
 		}
 	}
 
-	return { records: result.records, errors };
+	return { records: result.records, errors, format: 'transposed' };
 }
