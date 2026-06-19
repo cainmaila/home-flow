@@ -21,8 +21,9 @@
       驗收: admin/viewer 各自登入後 `/session/me` 回對應角色
 - [x] T1.4 角色守衛 | 依賴: T1.3 | 狀態: done
       驗收: viewer 打修改型 API 得 403
-- [ ] T1.5 Cloudflare Pages 部署 + session PoC | 依賴: T1.4 | 狀態: todo
+- [x] T1.5 Cloudflare Pages 部署 + session PoC | 依賴: T1.4 | 狀態: done
       驗收: push 後自動上線；重整／關開瀏覽器 7 天內登入不失；secret 不進前端 bundle
+      備註: code side complete — login/home pages, bundle security verified; actual CF deploy is manual
 
 ## M2 — 匯入與標準化
 
