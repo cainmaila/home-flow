@@ -1,4 +1,51 @@
 @import "tailwindcss";
-@plugin "daisyui" {
-	themes: corporate --default
+@plugin "daisyui";
+
+/* home-flow brand theme — modern financial.
+   Single source of truth for color / radius / depth. Swap a value here, whole app follows. */
+@plugin "daisyui/theme" {
+	name: "homeflow";
+	default: true;
+	prefersdark: false;
+	color-scheme: light;
+
+	/* Cool near-white surfaces, ink text */
+	--color-base-100: oklch(99% 0.003 250);
+	--color-base-200: oklch(96.5% 0.005 250);
+	--color-base-300: oklch(92% 0.008 250);
+	--color-base-content: oklch(27% 0.02 255);
+
+	/* Emerald = money / trust */
+	--color-primary: oklch(58% 0.12 165);
+	--color-primary-content: oklch(98% 0.01 165);
+
+	/* Slate secondary for non-primary actions */
+	--color-secondary: oklch(55% 0.06 255);
+	--color-secondary-content: oklch(98% 0.01 255);
+
+	/* Muted gold accent for highlights */
+	--color-accent: oklch(72% 0.11 75);
+	--color-accent-content: oklch(26% 0.03 75);
+
+	/* Deep ink slate — navbar / dark surfaces */
+	--color-neutral: oklch(28% 0.02 255);
+	--color-neutral-content: oklch(96% 0.005 255);
+
+	--color-info: oklch(62% 0.11 235);
+	--color-info-content: oklch(98% 0.01 235);
+	--color-success: oklch(62% 0.13 155);
+	--color-success-content: oklch(98% 0.01 155);
+	--color-warning: oklch(80% 0.12 80);
+	--color-warning-content: oklch(26% 0.04 80);
+	--color-error: oklch(60% 0.18 25);
+	--color-error-content: oklch(98% 0.01 25);
+
+	--radius-selector: 0.5rem;
+	--radius-field: 0.5rem;
+	--radius-box: 0.75rem;
+	--size-selector: 0.25rem;
+	--size-field: 0.25rem;
+	--border: 1px;
+	--depth: 1;
+	--noise: 0;
 }

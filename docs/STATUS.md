@@ -129,3 +129,12 @@ PRD: [docs/prd/Category-Redesign.md](docs/prd/Category-Redesign.md)
       驗收: 預覽新紀錄預設折疊 20 筆，可切換顯示全部 n 筆；每次上傳重置
 - [x] T8.5 可關閉 alert | 依賴: 無 | 狀態: done
       驗收: 分類頁 success/error alert 有關閉鈕，success 5s 自動消失
+
+## M9 — UED 改善 Phase 2（視覺系統 / 現代金融感）
+
+- [x] T9.1 自訂 DaisyUI 主題 homeflow | 依賴: 無 | 狀態: done
+      驗收: app.css 定義品牌 token（emerald primary、ink neutral、cool base、depth 陰影、圓角 box），脫離 corporate 預設藍；app.html data-theme 同步（全站截圖驗證）
+- [x] T9.2 圖表配色對齊主題 | 依賴: T9.1 | 狀態: done
+      驗收: 月報 doughnut/bar 改用與品牌協調的調色盤，選中月份 emerald 強調（截圖驗證）
+- [ ] T9.3 元件微一致化（按鈕尺寸階層、label-text、input-error、badge 語意）| 依賴: T9.1 | 狀態: todo
+      驗收: 抽查表單驗證顯示 input-error；按鈕尺寸一致

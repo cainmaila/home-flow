@@ -43,11 +43,11 @@
 	let filteredCount = $state(0);
 	let filterLoading = $state(false);
 
-	// Colors for categories
+	// Category palette — muted, harmonized with the emerald brand theme
 	const COLORS = [
-		'#4e79a7', '#f28e2b', '#e15759', '#76b7b2', '#59a14f',
-		'#edc948', '#b07aa1', '#ff9da7', '#9c755f', '#bab0ac',
-		'#86bcb6', '#8cd17d', '#b6992d', '#499894', '#e15759'
+		'#2f9e74', '#5b7aa8', '#d9a441', '#d56b6b', '#4fa3a0',
+		'#8b7bb0', '#7fa86a', '#c08552', '#6fa8c7', '#b07a99',
+		'#3f8f8a', '#9ca84f', '#cf8f5a', '#6b8fd5', '#a86a7f'
 	];
 
 	function formatAmount(cents: number): string {
@@ -216,7 +216,7 @@
 					label: '月支出',
 					data: trendMonths.map((m) => m.total),
 					backgroundColor: trendMonths.map((m) =>
-						m.month === selectedMonth ? '#2b5c8a' : '#4e79a7'
+						m.month === selectedMonth ? '#2f9e74' : '#b7d4c8'
 					)
 				}]
 			},
