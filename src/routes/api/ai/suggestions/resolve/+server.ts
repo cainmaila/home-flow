@@ -30,37 +30,43 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 			household_id: string;
 			raw_category: string;
 			suggested_category: string;
+			suggested_category_id: number | null;
 		}>();
 
 	if (!suggestion) throw error(404, 'Pending suggestion not found');
 
 	if (body.action === 'accept') {
-		// Write alias mapping
+		if (!suggestion.suggested_category_id) {
+			throw error(400, 'Suggested category no longer exists');
+		}
+
 		await db
 			.prepare(
-				`INSERT INTO category_aliases (id, household_id, raw_category, normalized_category, source)
-				 VALUES (?, ?, ?, ?, 'ai_auto')
-				 ON CONFLICT (household_id, raw_category) DO UPDATE SET normalized_category = excluded.normalized_category, source = 'ai_auto'`
+				`INSERT INTO category_aliases (id, household_id, raw_category, normalized_category, category_id, source)
+				 VALUES (?, ?, ?, ?, ?, 'ai_auto')
+				 ON CONFLICT (household_id, raw_category) DO UPDATE SET
+				   normalized_category = excluded.normalized_category,
+				   category_id = excluded.category_id,
+				   source = 'ai_auto'`
 			)
 			.bind(
 				crypto.randomUUID(),
 				suggestion.household_id,
 				suggestion.raw_category,
-				suggestion.suggested_category
+				suggestion.suggested_category,
+				suggestion.suggested_category_id
 			)
 			.run();
 
-		// Update expenses that match this raw_category and have no normalized_category
 		await db
 			.prepare(
-				`UPDATE expenses SET normalized_category = ?, updated_at = datetime('now')
-				 WHERE household_id = ? AND raw_category = ? AND normalized_category IS NULL`
+				`UPDATE expenses SET category_id = ?, updated_at = datetime('now')
+				 WHERE household_id = ? AND raw_category = ? AND category_id IS NULL`
 			)
-			.bind(suggestion.suggested_category, suggestion.household_id, suggestion.raw_category)
+			.bind(suggestion.suggested_category_id, suggestion.household_id, suggestion.raw_category)
 			.run();
 	}
 
-	// Mark suggestion as accepted/rejected
 	await db
 		.prepare(
 			`UPDATE ai_suggestions SET status = ?, resolved_at = datetime('now') WHERE id = ?`

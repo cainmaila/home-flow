@@ -1,17 +1,14 @@
-import { STANDARD_CATEGORY_SET } from '$lib/config/categories';
-
 export interface ResolveResult {
-	normalized_category: string | null;
+	category_id: number | null;
 	source: 'override' | 'manual' | 'ai_auto' | 'fallback' | null;
 }
 
 /**
- * Resolve a raw_category to its normalized_category using a 4-layer priority chain.
- * Data-Rules §4.4:
- *   1. category_overrides (expense-specific override)
- *   2. category_aliases where source='manual'
- *   3. category_aliases where source='ai_auto'
- *   4. fallback: exact match with standard category name
+ * Resolve a raw_category to a category_id using a 4-layer priority chain.
+ *   1. category_overrides (expense-specific override) → category_id
+ *   2. category_aliases where source='manual' → category_id
+ *   3. category_aliases where source='ai_auto' → category_id
+ *   4. fallback: exact name match in categories table (child only, non-deleted)
  *   5. Otherwise: null (pending/unresolved)
  */
 export async function resolveCategory(
@@ -24,43 +21,52 @@ export async function resolveCategory(
 	if (expenseId) {
 		const override = await db
 			.prepare(
-				`SELECT new_value FROM category_overrides
-				 WHERE expense_id = ? AND field = 'category'
+				`SELECT category_id FROM category_overrides
+				 WHERE expense_id = ? AND field = 'category' AND category_id IS NOT NULL
 				 ORDER BY created_at DESC LIMIT 1`
 			)
 			.bind(expenseId)
-			.first<{ new_value: string }>();
+			.first<{ category_id: number }>();
 
 		if (override) {
-			return { normalized_category: override.new_value, source: 'override' };
+			return { category_id: override.category_id, source: 'override' };
 		}
 	}
 
 	// Layer 2 & 3: alias lookup (manual wins over ai_auto via ORDER BY)
 	const alias = await db
 		.prepare(
-			`SELECT normalized_category, source FROM category_aliases
-			 WHERE household_id = ? AND raw_category = ?
+			`SELECT category_id, source FROM category_aliases
+			 WHERE household_id = ? AND raw_category = ? AND category_id IS NOT NULL
 			 ORDER BY CASE source WHEN 'manual' THEN 0 WHEN 'ai_auto' THEN 1 END
 			 LIMIT 1`
 		)
 		.bind(householdId, rawCategory)
-		.first<{ normalized_category: string; source: string }>();
+		.first<{ category_id: number; source: string }>();
 
 	if (alias) {
 		return {
-			normalized_category: alias.normalized_category,
+			category_id: alias.category_id,
 			source: alias.source as 'manual' | 'ai_auto'
 		};
 	}
 
-	// Layer 4: fallback - exact match with standard category
-	if (STANDARD_CATEGORY_SET.has(rawCategory)) {
-		return { normalized_category: rawCategory, source: 'fallback' };
+	// Layer 4: fallback — exact name match against non-deleted child categories
+	const cat = await db
+		.prepare(
+			`SELECT id FROM categories
+			 WHERE household_id = ? AND name = ? AND parent_id IS NOT NULL AND is_deleted = 0
+			 LIMIT 1`
+		)
+		.bind(householdId, rawCategory)
+		.first<{ id: number }>();
+
+	if (cat) {
+		return { category_id: cat.id, source: 'fallback' };
 	}
 
 	// Unresolved
-	return { normalized_category: null, source: null };
+	return { category_id: null, source: null };
 }
 
 /**
@@ -72,11 +78,10 @@ export async function resolveCategoriesForImport(
 	householdId: string,
 	importId: string
 ): Promise<{ resolved: number; pending: number }> {
-	// Get all expenses from this import that have no normalized_category
 	const expenses = await db
 		.prepare(
 			`SELECT id, raw_category FROM expenses
-			 WHERE source_import_id = ? AND household_id = ? AND normalized_category IS NULL`
+			 WHERE source_import_id = ? AND household_id = ? AND category_id IS NULL`
 		)
 		.bind(importId, householdId)
 		.all<{ id: string; raw_category: string }>();
@@ -87,13 +92,13 @@ export async function resolveCategoriesForImport(
 	for (const expense of expenses.results) {
 		const result = await resolveCategory(db, householdId, expense.raw_category, expense.id);
 
-		if (result.normalized_category) {
+		if (result.category_id) {
 			await db
 				.prepare(
-					`UPDATE expenses SET normalized_category = ?, updated_at = datetime('now')
+					`UPDATE expenses SET category_id = ?, updated_at = datetime('now')
 					 WHERE id = ?`
 				)
-				.bind(result.normalized_category, expense.id)
+				.bind(result.category_id, expense.id)
 				.run();
 			resolved++;
 		} else {

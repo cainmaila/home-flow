@@ -10,7 +10,7 @@
 	let selectedMonth = $state('');
 	let availableMonths: string[] = $state([]);
 	let totalExpense = $state(0);
-	let categoryBreakdown: { category: string; total: number; percentage: number }[] = $state([]);
+	let categoryBreakdown: { category: string; parent_category: string; category_id: number | null; parent_id: number | null; total: number; percentage: number }[] = $state([]);
 
 	// Trend data
 	let trendMonths: { month: string; total: number }[] = $state([]);
@@ -66,7 +66,7 @@
 			const data = (await res.json()) as {
 				month: string | null;
 				totalExpense: number;
-				categoryBreakdown: { category: string; total: number; percentage: number }[];
+				categoryBreakdown: typeof categoryBreakdown;
 				availableMonths: string[];
 			};
 			selectedMonth = data.month ?? '';
@@ -93,11 +93,12 @@
 		}
 	}
 
-	async function loadFilteredExpenses(category: string) {
+	async function loadFilteredExpenses(category: string, categoryId?: number | null) {
 		filterLoading = true;
 		const params = new URLSearchParams();
 		params.set('month', selectedMonth);
-		params.set('category', category);
+		if (categoryId) params.set('categoryId', String(categoryId));
+		else params.set('category', category);
 		try {
 			const res = await fetch(`/api/expenses/search?${params}`);
 			if (!res.ok) return;
@@ -124,13 +125,13 @@
 		renderDoughnutChart();
 	}
 
-	async function selectCategory(category: string) {
+	async function selectCategory(category: string, categoryId?: number | null) {
 		if (selectedCategory === category) {
 			clearCategoryFilter();
 			return;
 		}
 		selectedCategory = category;
-		await loadFilteredExpenses(category);
+		await loadFilteredExpenses(category, categoryId);
 		renderDoughnutChart();
 	}
 
@@ -170,7 +171,7 @@
 		doughnutChart = new Chart(doughnutCanvas, {
 			type: 'doughnut',
 			data: {
-				labels: categoryBreakdown.map((c) => c.category),
+				labels: categoryBreakdown.map((c) => c.parent_category !== '未分類' ? `${c.parent_category} > ${c.category}` : c.category),
 				datasets: [{
 					data: categoryBreakdown.map((c) => c.total),
 					backgroundColor: bgColors,
@@ -185,7 +186,7 @@
 					if (elements.length === 0) return;
 					const index = elements[0].index;
 					const category = categoryBreakdown[index]?.category;
-					if (category) selectCategory(category);
+					if (category) selectCategory(category, categoryBreakdown[index]?.category_id);
 				},
 				plugins: {
 					legend: { position: 'bottom' },
@@ -352,8 +353,8 @@
 									<tr class={selectedCategory === cat.category ? 'bg-primary/10' : 'hover'}>
 										<td>{i + 1}</td>
 										<td>
-											<button class="link link-primary" onclick={() => selectCategory(cat.category)}>
-												{cat.category}
+											<button class="link link-primary" onclick={() => selectCategory(cat.category, cat.category_id)}>
+												{cat.parent_category !== '未分類' ? `${cat.parent_category} > ` : ''}{cat.category}
 											</button>
 										</td>
 										<td class="text-right tabular-nums">{formatAmount(cat.total)}</td>

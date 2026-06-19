@@ -15,7 +15,7 @@ export const GET: RequestHandler = async ({ locals, platform, url }) => {
 		.prepare(
 			`SELECT DISTINCT raw_category, COUNT(*) as count
 			 FROM expenses
-			 WHERE household_id = ? AND normalized_category IS NULL
+			 WHERE household_id = ? AND category_id IS NULL
 			 GROUP BY raw_category
 			 ORDER BY count DESC`
 		)

@@ -20,6 +20,8 @@
 		expense_date: string;
 		raw_category: string;
 		normalized_category: string;
+		category_name?: string;
+		parent_category_name?: string | null;
 		amount: number;
 		is_fixed_expense: boolean;
 	}[] = $state([]);
@@ -218,7 +220,7 @@
 								{#each sortedExpenses as exp}
 									<tr class="hover">
 										<td>{exp.expense_date}</td>
-										<td>{exp.normalized_category}</td>
+										<td>{exp.parent_category_name ? `${exp.parent_category_name} > ` : ''}{exp.normalized_category}</td>
 										<td class="text-right tabular-nums">{formatAmount(exp.amount)}</td>
 										<td>{exp.is_fixed_expense ? '是' : ''}</td>
 									</tr>

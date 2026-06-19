@@ -1,9 +1,3 @@
-/**
- * Server-side Gemini API caller for category suggestions.
- * T5.1: Proxy to Gemini 2.5 Flash-Lite. Key stays server-side.
- * T5.3: Rate limiting, error handling, fallback, auto-disable.
- */
-
 import { recordCall } from './quota';
 
 export interface CategorySuggestion {
@@ -12,10 +6,18 @@ export interface CategorySuggestion {
 	confidence: number;
 }
 
+export interface CategoryWithExamples {
+	name: string;
+	parent_name: string;
+	description: string | null;
+	examples: string[];
+}
+
 const GEMINI_URL =
 	'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent';
 const TIMEOUT_MS = 10_000;
 const MAX_CONSECUTIVE_FAILURES = 3;
+const MAX_PROMPT_CHARS = 12_000; // ~4000 tokens
 
 let consecutiveFailures = 0;
 let autoDisabled = false;
@@ -29,26 +31,88 @@ export function resetAutoDisable(): void {
 	autoDisabled = false;
 }
 
-function buildPrompt(unmatchedCategories: string[], existingCategories: string[]): string {
+function buildPrompt(
+	unmatchedCategories: string[],
+	categoriesWithExamples: CategoryWithExamples[]
+): string {
+	const categoryLines = categoriesWithExamples.map((c) => {
+		const label = `${c.parent_name}（${c.description ?? ''}）> ${c.name}`;
+		if (c.examples.length > 0) {
+			return `- ${label}  歷史：${c.examples.join('、')}`;
+		}
+		return `- ${label}  （無歷史範例）`;
+	});
+
+	let categoryBlock = categoryLines.join('\n');
+
+	// Truncate if too long — drop examples from end
+	if (categoryBlock.length > MAX_PROMPT_CHARS) {
+		const shortLines = categoriesWithExamples.map((c) => `- ${c.parent_name} > ${c.name}`);
+		categoryBlock = shortLines.join('\n');
+	}
+
 	return `You are a household expense category matcher.
 
 Given these unmatched category names from a CSV import:
 ${JSON.stringify(unmatchedCategories)}
 
-And these existing standard categories:
-${JSON.stringify(existingCategories)}
+Available categories (format: parent > child):
+${categoryBlock}
 
-For each unmatched category, suggest the best matching standard category and a confidence score (0 to 1).
+For each unmatched category, suggest the best matching child category name (just the child name, not "parent > child") and a confidence score (0 to 1).
 If no good match exists, use the closest category with a low confidence.
 
 Respond ONLY with a JSON array, no markdown, no explanation:
 [{"raw_category":"...","suggested_category":"...","confidence":0.XX}]`;
 }
 
+/**
+ * Load categories with historical examples from DB.
+ * Each child category gets up to 10 most recent raw_category values from aliases.
+ */
+export async function loadCategoriesWithExamples(
+	db: D1Database,
+	householdId: string
+): Promise<CategoryWithExamples[]> {
+	const cats = await db
+		.prepare(
+			`SELECT c.id, c.name, p.name as parent_name, p.description
+			 FROM categories c
+			 JOIN categories p ON c.parent_id = p.id
+			 WHERE c.household_id = ? AND c.is_deleted = 0 AND c.parent_id IS NOT NULL
+			 ORDER BY p.sort_order, c.sort_order`
+		)
+		.bind(householdId)
+		.all<{ id: number; name: string; parent_name: string; description: string | null }>();
+
+	const result: CategoryWithExamples[] = [];
+
+	for (const cat of cats.results) {
+		const aliases = await db
+			.prepare(
+				`SELECT raw_category FROM category_aliases
+				 WHERE household_id = ? AND category_id = ?
+				 ORDER BY created_at DESC LIMIT 10`
+			)
+			.bind(householdId, cat.id)
+			.all<{ raw_category: string }>();
+
+		result.push({
+			name: cat.name,
+			parent_name: cat.parent_name,
+			description: cat.description,
+			examples: aliases.results.map((a) => a.raw_category)
+		});
+	}
+
+	return result;
+}
+
 export async function suggestCategories(
 	unmatchedCategories: string[],
 	existingCategories: string[],
-	apiKey: string
+	apiKey: string,
+	categoriesWithExamples?: CategoryWithExamples[]
 ): Promise<CategorySuggestion[]> {
 	if (autoDisabled) {
 		console.warn('[AI] Auto-disabled due to consecutive failures. Call resetAutoDisable() to re-enable.');
@@ -61,7 +125,14 @@ export async function suggestCategories(
 	const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
 	try {
-		const prompt = buildPrompt(unmatchedCategories, existingCategories);
+		const cats = categoriesWithExamples ?? existingCategories.map((name) => ({
+			name: name.includes(' > ') ? name.split(' > ')[1] : name,
+			parent_name: name.includes(' > ') ? name.split(' > ')[0] : '',
+			description: null,
+			examples: []
+		}));
+
+		const prompt = buildPrompt(unmatchedCategories, cats);
 		const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
@@ -80,13 +151,11 @@ export async function suggestCategories(
 		const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
 		if (!text) throw new Error('Empty response from Gemini');
 
-		// Extract JSON array from response (may have markdown code fences)
 		const jsonMatch = text.match(/\[[\s\S]*\]/);
 		if (!jsonMatch) throw new Error('No JSON array in Gemini response');
 
 		const suggestions = JSON.parse(jsonMatch[0]) as CategorySuggestion[];
 
-		// Validate structure
 		const valid = suggestions.filter(
 			(s) =>
 				typeof s.raw_category === 'string' &&
@@ -96,7 +165,6 @@ export async function suggestCategories(
 				s.confidence <= 1
 		);
 
-		// Success: reset failure counter
 		consecutiveFailures = 0;
 		recordCall();
 

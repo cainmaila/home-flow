@@ -10,7 +10,6 @@ export const GET: RequestHandler = async ({ platform, locals, url }) => {
 	const db = platform?.env?.DB;
 	if (!db) throw error(500, 'Database not available');
 
-	// Get available months
 	const monthsResult = await db
 		.prepare(
 			`SELECT DISTINCT strftime('%Y-%m', expense_date) as month
@@ -28,7 +27,6 @@ export const GET: RequestHandler = async ({ platform, locals, url }) => {
 
 	const month = url.searchParams.get('month') ?? availableMonths[0];
 
-	// Total expense for the month
 	const totalResult = await db
 		.prepare(
 			`SELECT SUM(amount) as total
@@ -39,18 +37,36 @@ export const GET: RequestHandler = async ({ platform, locals, url }) => {
 
 	const totalExpense = totalResult?.total ?? 0;
 
-	// Category breakdown
+	// Category breakdown: join categories for name, group by parent
 	const categoryResult = await db
 		.prepare(
-			`SELECT COALESCE(normalized_category, raw_category) as category, SUM(amount) as total
-			 FROM expenses WHERE household_id = ? AND strftime('%Y-%m', expense_date) = ?
-			 GROUP BY category ORDER BY total DESC`
+			`SELECT
+			   COALESCE(c.name, e.raw_category) as category,
+			   COALESCE(p.name, '未分類') as parent_category,
+			   c.id as category_id,
+			   p.id as parent_id,
+			   SUM(e.amount) as total
+			 FROM expenses e
+			 LEFT JOIN categories c ON e.category_id = c.id
+			 LEFT JOIN categories p ON c.parent_id = p.id
+			 WHERE e.household_id = ? AND strftime('%Y-%m', e.expense_date) = ?
+			 GROUP BY COALESCE(c.id, e.raw_category)
+			 ORDER BY total DESC`
 		)
 		.bind(HOUSEHOLD_ID, month)
-		.all<{ category: string; total: number }>();
+		.all<{
+			category: string;
+			parent_category: string;
+			category_id: number | null;
+			parent_id: number | null;
+			total: number;
+		}>();
 
 	const categoryBreakdown = categoryResult.results.map((r) => ({
 		category: r.category,
+		parent_category: r.parent_category,
+		category_id: r.category_id,
+		parent_id: r.parent_id,
 		total: r.total,
 		percentage: totalExpense > 0 ? Math.round((r.total / totalExpense) * 1000) / 10 : 0
 	}));

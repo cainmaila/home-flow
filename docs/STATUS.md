@@ -91,3 +91,26 @@
 
 - [x] T6.1 Playwright 正向流程 e2e | 依賴: T4.1 | 狀態: done
       驗收: `npm run test:e2e` 綠 — 登入(偽造 session)→匯入 docs/費用.csv→月報出現總支出
+
+## M7 — 分類系統重設計
+
+PRD: [docs/prd/Category-Redesign.md](docs/prd/Category-Redesign.md)
+
+- [x] T7.1 categories 表 + seed migration | 依賴: 無 | 狀態: done
+      驗收: `wrangler d1 migrations apply` 後 categories 表有 9 大類 22 子類；UNIQUE(parent_id, name) 生效
+- [x] T7.2 categories CRUD API | 依賴: T7.1 | 狀態: done
+      驗收: GET /api/categories 回兩層樹；POST/PUT/DELETE 各操作正確；刪除大類 cascade 子類；軟刪除後 GET 不回傳
+- [x] T7.3 現有表 FK 遷移 | 依賴: T7.1 | 狀態: done
+      驗收: expenses.category_id、category_aliases.category_id、category_overrides.category_id、fixed_expense_rules.category_id 均為 INTEGER FK；現有文字資料已 backfill 為對應 ID
+- [x] T7.4 resolveCategory 改查 DB | 依賴: T7.3 | 狀態: done
+      驗收: resolve.test.ts 全過；layer 4 fallback 查 categories 表而非硬編碼 set；刪除 categories.ts
+- [x] T7.5 分類編輯器頁面 /settings/categories | 依賴: T7.2 | 狀態: done
+      驗收: 管理者可新增/改名/刪除/排序大類與子類，含 icon/color 編輯；viewer 無法存取
+- [x] T7.6 前端下拉改兩層動態選擇 | 依賴: T7.2, T7.4 | 狀態: done
+      驗收: 校正頁、匯入預覽、單筆覆寫的分類選擇均為兩層級聯（大類→子類）；資料來自 API
+- [x] T7.7 AI prompt 動態化 + 歷史範例注入 | 依賴: T7.3, T7.4 | 狀態: done
+      驗收: buildPrompt 從 DB 讀分類+歷史範例；token ≤ 4000；無分類時跳過 AI
+- [x] T7.8 報表兩層聚合 | 依賴: T7.3 | 狀態: done
+      驗收: 月報可按大類聚合也可按子類展開；占比加總 100%
+- [x] T7.9 刪除清理 + 回歸測試 | 依賴: T7.4, T7.6, T7.7, T7.8 | 狀態: done
+      驗收: 刪除分類後費用變未分類、aliases 軟刪、pending ai_suggestions 拒絕；既有 e2e 仍綠

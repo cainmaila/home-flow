@@ -12,22 +12,21 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 	const body = (await request.json()) as {
 		householdId?: string;
 		expenseId?: string;
-		newCategory?: string;
+		categoryId?: number;
 	};
 
 	const householdId = body.householdId;
 	const expenseId = body.expenseId;
-	const newCategory = body.newCategory;
+	const categoryId = body.categoryId;
 
 	if (!householdId) throw error(400, 'Missing householdId');
 	if (!expenseId) throw error(400, 'Missing expenseId');
-	if (!newCategory) throw error(400, 'Missing newCategory');
+	if (!categoryId) throw error(400, 'Missing categoryId');
 
-	// Get current category for old_value
 	const expense = await db
-		.prepare(`SELECT normalized_category FROM expenses WHERE id = ? AND household_id = ?`)
+		.prepare(`SELECT category_id FROM expenses WHERE id = ? AND household_id = ?`)
 		.bind(expenseId, householdId)
-		.first<{ normalized_category: string | null }>();
+		.first<{ category_id: number | null }>();
 
 	if (!expense) throw error(404, 'Expense not found');
 
@@ -35,19 +34,18 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 
 	await db
 		.prepare(
-			`INSERT INTO category_overrides (id, household_id, expense_id, field, old_value, new_value, created_by)
-			 VALUES (?, ?, ?, 'category', ?, ?, ?)`
+			`INSERT INTO category_overrides (id, household_id, expense_id, field, old_value, new_value, category_id, created_by)
+			 VALUES (?, ?, ?, 'category', ?, ?, ?, ?)`
 		)
-		.bind(id, householdId, expenseId, expense.normalized_category, newCategory, user.email)
+		.bind(id, householdId, expenseId, expense.category_id?.toString() ?? null, categoryId.toString(), categoryId, user.email)
 		.run();
 
-	// Update the expense record immediately
 	await db
 		.prepare(
-			`UPDATE expenses SET normalized_category = ?, updated_at = datetime('now')
+			`UPDATE expenses SET category_id = ?, updated_at = datetime('now')
 			 WHERE id = ?`
 		)
-		.bind(newCategory, expenseId)
+		.bind(categoryId, expenseId)
 		.run();
 
 	return json({ ok: true });

@@ -1,14 +1,9 @@
-/**
- * POST /api/ai/suggest — Trigger AI category suggestions for unmatched categories.
- * T5.1: Requires admin + feature flag enabled.
- */
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { requireAdmin } from '$lib/server/auth/guard';
 import { isAIEnabled } from '$lib/server/ai/config';
-import { suggestCategories } from '$lib/server/ai/gemini';
+import { suggestCategories, loadCategoriesWithExamples } from '$lib/server/ai/gemini';
 import { isQuotaExceeded } from '$lib/server/ai/quota';
-import { STANDARD_CATEGORIES } from '$lib/config/categories';
 
 export const POST: RequestHandler = async ({ request, locals, platform }) => {
 	requireAdmin(locals);
@@ -33,7 +28,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 			 LEFT JOIN ai_suggestions s
 			   ON s.household_id = e.household_id AND s.raw_category = e.raw_category AND s.status = 'pending'
 			 WHERE e.household_id = ?
-			   AND e.normalized_category IS NULL
+			   AND e.category_id IS NULL
 			   AND ca.id IS NULL
 			   AND s.id IS NULL`
 		)
@@ -46,20 +41,41 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 		return json({ suggestions: [], message: 'No unmatched categories' });
 	}
 
+	const catsWithExamples = await loadCategoriesWithExamples(db, householdId);
+	if (catsWithExamples.length === 0) {
+		return json({ suggestions: [], message: 'No categories defined' });
+	}
+
+	// Build name→id lookup
+	const catRows = await db
+		.prepare(
+			`SELECT id, name FROM categories
+			 WHERE household_id = ? AND parent_id IS NOT NULL AND is_deleted = 0`
+		)
+		.bind(householdId)
+		.all<{ id: number; name: string }>();
+
+	const nameToId = new Map<string, number>();
+	for (const r of catRows.results) {
+		nameToId.set(r.name, r.id);
+	}
+
 	const suggestions = await suggestCategories(
 		unmatched,
-		[...STANDARD_CATEGORIES],
-		env.GOOGLE_AI_API_KEY!
+		[],
+		env.GOOGLE_AI_API_KEY!,
+		catsWithExamples
 	);
 
 	for (const s of suggestions) {
+		const categoryId = nameToId.get(s.suggested_category);
 		await db
 			.prepare(
-				`INSERT INTO ai_suggestions (id, household_id, import_id, raw_category, suggested_category, confidence, status)
-				 VALUES (?, ?, '', ?, ?, ?, 'pending')
+				`INSERT INTO ai_suggestions (id, household_id, import_id, raw_category, suggested_category, suggested_category_id, confidence, status)
+				 VALUES (?, ?, '', ?, ?, ?, ?, 'pending')
 				 ON CONFLICT DO NOTHING`
 			)
-			.bind(crypto.randomUUID(), householdId, s.raw_category, s.suggested_category, s.confidence)
+			.bind(crypto.randomUUID(), householdId, s.raw_category, s.suggested_category, categoryId ?? null, s.confidence)
 			.run();
 	}
 

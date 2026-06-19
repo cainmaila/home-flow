@@ -1,8 +1,25 @@
 <script lang="ts">
-	import { STANDARD_CATEGORIES } from '$lib/config/categories';
-
 	const HOUSEHOLD_ID = 'default';
 
+	interface CategoryChild {
+		id: number;
+		name: string;
+		icon: string | null;
+		color: string | null;
+		sort_order: number;
+	}
+
+	interface CategoryParent {
+		id: number;
+		name: string;
+		description: string | null;
+		icon: string | null;
+		color: string | null;
+		sort_order: number;
+		children: CategoryChild[];
+	}
+
+	let categories: CategoryParent[] = $state([]);
 	let pending: { raw_category: string; count: number }[] = $state([]);
 	let aiSuggestions: {
 		id: string;
@@ -14,8 +31,11 @@
 		id: string;
 		raw_category: string;
 		normalized_category: string;
+		category_id: number | null;
 		source: string;
 		created_at: string;
+		category_name: string | null;
+		parent_name: string | null;
 	}[] = $state([]);
 
 	let loading = $state(true);
@@ -25,19 +45,24 @@
 	let selectedSuggestions: Set<string> = $state(new Set());
 
 	let newAliasRaw = $state('');
-	let newAliasNormalized = $state('');
+	let newAliasParentId: number | null = $state(null);
+	let newAliasCategoryId: number | null = $state(null);
+
+	let selectedParent = $derived(categories.find((c) => c.id === newAliasParentId));
+	let childOptions = $derived(selectedParent?.children ?? []);
 
 	async function loadData() {
 		loading = true;
 		errorMessage = '';
 		try {
-			const [pendingRes, aliasRes, aiRes] = await Promise.all([
+			const [pendingRes, aliasRes, aiRes, catRes] = await Promise.all([
 				fetch(`/api/categories/pending?householdId=${HOUSEHOLD_ID}`),
 				fetch(`/api/categories/alias?householdId=${HOUSEHOLD_ID}`),
-				fetch('/api/ai/suggestions?status=pending')
+				fetch('/api/ai/suggestions?status=pending'),
+				fetch(`/api/categories/manage?householdId=${HOUSEHOLD_ID}`)
 			]);
 
-			if (!pendingRes.ok || !aliasRes.ok || !aiRes.ok) {
+			if (!pendingRes.ok || !aliasRes.ok || !aiRes.ok || !catRes.ok) {
 				errorMessage = '載入失敗';
 				return;
 			}
@@ -45,6 +70,7 @@
 			pending = await pendingRes.json();
 			aliases = await aliasRes.json();
 			aiSuggestions = ((await aiRes.json()) as { suggestions: typeof aiSuggestions }).suggestions;
+			categories = await catRes.json();
 		} catch {
 			errorMessage = '網路錯誤';
 		} finally {
@@ -56,8 +82,8 @@
 		loadData();
 	});
 
-	async function createAlias(rawCategory: string, normalizedCategory: string) {
-		if (!normalizedCategory) return;
+	async function createAlias(rawCategory: string, categoryId: number | null) {
+		if (!categoryId) return;
 
 		errorMessage = '';
 		successMessage = '';
@@ -69,7 +95,7 @@
 				body: JSON.stringify({
 					householdId: HOUSEHOLD_ID,
 					rawCategory: rawCategory,
-					normalizedCategory: normalizedCategory
+					categoryId: categoryId
 				})
 			});
 
@@ -79,9 +105,11 @@
 				return;
 			}
 
-			successMessage = `已將「${rawCategory}」映射到「${normalizedCategory}」`;
+			const cat = childOptions.find((c) => c.id === categoryId);
+			successMessage = `已將「${rawCategory}」映射到「${selectedParent?.name} > ${cat?.name}」`;
 			newAliasRaw = '';
-			newAliasNormalized = '';
+			newAliasParentId = null;
+			newAliasCategoryId = null;
 			await loadData();
 		} catch {
 			errorMessage = '網路錯誤';
@@ -90,7 +118,8 @@
 
 	function handlePendingMap(rawCategory: string) {
 		newAliasRaw = rawCategory;
-		newAliasNormalized = '';
+		newAliasParentId = null;
+		newAliasCategoryId = null;
 	}
 
 	async function triggerAISuggestions() {
@@ -262,7 +291,7 @@
 											onchange={toggleAll} />
 									</th>
 									<th>原始分類</th>
-									<th>建議標準分類</th>
+									<th>建議分類</th>
 									<th class="text-right">信心</th>
 									<th>操作</th>
 								</tr>
@@ -301,7 +330,7 @@
 			</div>
 		</div>
 
-		<!-- New alias form -->
+		<!-- New alias form: two-level cascading select -->
 		<div class="card bg-base-100 shadow">
 			<div class="card-body">
 				<h2 class="card-title text-lg">新增分類映射</h2>
@@ -310,19 +339,28 @@
 						<div class="label"><span class="label-text font-semibold">原始分類</span></div>
 						<input type="text" class="input input-bordered input-sm" bind:value={newAliasRaw} placeholder="例: 消夜/零食" />
 					</label>
-					<label class="form-control w-full max-w-xs">
-						<div class="label"><span class="label-text font-semibold">標準分類</span></div>
-						<select class="select select-bordered select-sm" bind:value={newAliasNormalized}>
-							<option value="">-- 選擇 --</option>
-							{#each STANDARD_CATEGORIES as cat}
-								<option value={cat}>{cat}</option>
+					<label class="form-control w-full max-w-[10rem]">
+						<div class="label"><span class="label-text font-semibold">大類</span></div>
+						<select class="select select-bordered select-sm" bind:value={newAliasParentId} onchange={() => { newAliasCategoryId = null; }}>
+							<option value={null}>-- 選擇 --</option>
+							{#each categories as cat}
+								<option value={cat.id}>{cat.icon ?? ''} {cat.name}</option>
+							{/each}
+						</select>
+					</label>
+					<label class="form-control w-full max-w-[10rem]">
+						<div class="label"><span class="label-text font-semibold">子類</span></div>
+						<select class="select select-bordered select-sm" bind:value={newAliasCategoryId} disabled={!newAliasParentId}>
+							<option value={null}>-- 選擇 --</option>
+							{#each childOptions as child}
+								<option value={child.id}>{child.name}</option>
 							{/each}
 						</select>
 					</label>
 					<button
 						class="btn btn-primary btn-sm"
-						onclick={() => createAlias(newAliasRaw, newAliasNormalized)}
-						disabled={!newAliasRaw || !newAliasNormalized}
+						onclick={() => createAlias(newAliasRaw, newAliasCategoryId)}
+						disabled={!newAliasRaw || !newAliasCategoryId}
 					>
 						確認
 					</button>
@@ -342,7 +380,7 @@
 							<thead>
 								<tr>
 									<th>原始分類</th>
-									<th>標準分類</th>
+									<th>分類</th>
 									<th>來源</th>
 									<th>建立時間</th>
 								</tr>
@@ -351,7 +389,7 @@
 								{#each aliases as alias}
 									<tr class="hover">
 										<td>{alias.raw_category}</td>
-										<td>{alias.normalized_category}</td>
+										<td>{alias.parent_name ? `${alias.parent_name} > ` : ''}{alias.category_name ?? alias.normalized_category}</td>
 										<td>
 											<span class="badge badge-sm {alias.source === 'manual' ? 'badge-primary' : 'badge-ghost'}">
 												{alias.source === 'manual' ? '人工' : 'AI 自動'}

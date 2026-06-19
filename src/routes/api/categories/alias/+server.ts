@@ -13,18 +13,24 @@ export const GET: RequestHandler = async ({ locals, platform, url }) => {
 
 	const rows = await db
 		.prepare(
-			`SELECT id, raw_category, normalized_category, source, created_at
-			 FROM category_aliases
-			 WHERE household_id = ?
-			 ORDER BY created_at DESC`
+			`SELECT ca.id, ca.raw_category, ca.normalized_category, ca.category_id, ca.source, ca.created_at,
+			        c.name as category_name, p.name as parent_name
+			 FROM category_aliases ca
+			 LEFT JOIN categories c ON ca.category_id = c.id
+			 LEFT JOIN categories p ON c.parent_id = p.id
+			 WHERE ca.household_id = ?
+			 ORDER BY ca.created_at DESC`
 		)
 		.bind(householdId)
 		.all<{
 			id: string;
 			raw_category: string;
 			normalized_category: string;
+			category_id: number | null;
 			source: string;
 			created_at: string;
+			category_name: string | null;
+			parent_name: string | null;
 		}>();
 
 	return json(rows.results);
@@ -40,42 +46,48 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 	const body = (await request.json()) as {
 		householdId?: string;
 		rawCategory?: string;
-		normalizedCategory?: string;
+		categoryId?: number;
 	};
 
 	const householdId = body.householdId;
 	const rawCategory = body.rawCategory;
-	const normalizedCategory = body.normalizedCategory;
+	const categoryId = body.categoryId;
 
 	if (!householdId) throw error(400, 'Missing householdId');
 	if (!rawCategory) throw error(400, 'Missing rawCategory');
-	if (!normalizedCategory) throw error(400, 'Missing normalizedCategory');
+	if (!categoryId) throw error(400, 'Missing categoryId');
+
+	// Look up category name for backward compat
+	const cat = await db
+		.prepare('SELECT name FROM categories WHERE id = ? AND household_id = ? AND is_deleted = 0')
+		.bind(categoryId, householdId)
+		.first<{ name: string }>();
+	if (!cat) throw error(400, 'Category not found');
 
 	const id = crypto.randomUUID();
 
-	// UPSERT: if alias for this household+raw_category exists, update it
 	await db
 		.prepare(
-			`INSERT INTO category_aliases (id, household_id, raw_category, normalized_category, source)
-			 VALUES (?, ?, ?, ?, 'manual')
+			`INSERT INTO category_aliases (id, household_id, raw_category, normalized_category, category_id, source)
+			 VALUES (?, ?, ?, ?, ?, 'manual')
 			 ON CONFLICT (household_id, raw_category)
 			 DO UPDATE SET normalized_category = excluded.normalized_category,
+			              category_id = excluded.category_id,
 			              source = 'manual'`
 		)
-		.bind(id, householdId, rawCategory, normalizedCategory)
+		.bind(id, householdId, rawCategory, cat.name, categoryId)
 		.run();
 
-	// Apply to all existing expenses with this raw_category that have no override
 	await db
 		.prepare(
 			`UPDATE expenses
-			 SET normalized_category = ?, updated_at = datetime('now')
+			 SET category_id = ?, updated_at = datetime('now')
 			 WHERE household_id = ? AND raw_category = ?
 			   AND id NOT IN (
 			     SELECT expense_id FROM category_overrides WHERE field = 'category'
 			   )`
 		)
-		.bind(normalizedCategory, householdId, rawCategory)
+		.bind(categoryId, householdId, rawCategory)
 		.run();
 
 	return json({ ok: true });

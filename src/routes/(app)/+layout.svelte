@@ -18,6 +18,7 @@
 					<li><a href="/import">匯入</a></li>
 					<li><a href="/corrections">校正</a></li>
 					<li><a href="/import/history">歷程</a></li>
+					<li><a href="/settings/categories">分類</a></li>
 				</ul>
 			</div>
 			<a href="/reports" class="btn btn-ghost text-xl">Home Flow</a>
@@ -29,6 +30,7 @@
 				<li><a href="/import">匯入</a></li>
 				<li><a href="/corrections">校正</a></li>
 				<li><a href="/import/history">歷程</a></li>
+					<li><a href="/settings/categories">分類</a></li>
 			</ul>
 		</div>
 		<div class="navbar-end">
