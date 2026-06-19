@@ -19,7 +19,7 @@
       驗收: seed 後 D1 有第一位 admin；非 allowlist email 標記不可登入
 - [x] T1.3 Google OAuth + session | 依賴: T1.2 | 狀態: done
       驗收: admin/viewer 各自登入後 `/session/me` 回對應角色
-- [ ] T1.4 角色守衛 | 依賴: T1.3 | 狀態: todo
+- [x] T1.4 角色守衛 | 依賴: T1.3 | 狀態: done
       驗收: viewer 打修改型 API 得 403
 - [ ] T1.5 Cloudflare Pages 部署 + session PoC | 依賴: T1.4 | 狀態: todo
       驗收: push 後自動上線；重整／關開瀏覽器 7 天內登入不失；secret 不進前端 bundle
