@@ -17,7 +17,7 @@
       驗收: `wrangler d1 migrations apply` 本機可重現、可重跑
 - [x] T1.2 admin bootstrap seed + allowlist | 依賴: T1.1 | 狀態: done
       驗收: seed 後 D1 有第一位 admin；非 allowlist email 標記不可登入
-- [ ] T1.3 Google OAuth + session | 依賴: T1.2 | 狀態: todo
+- [x] T1.3 Google OAuth + session | 依賴: T1.2 | 狀態: done
       驗收: admin/viewer 各自登入後 `/session/me` 回對應角色
 - [ ] T1.4 角色守衛 | 依賴: T1.3 | 狀態: todo
       驗收: viewer 打修改型 API 得 403
