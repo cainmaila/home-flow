@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { tick } from 'svelte';
 	const HOUSEHOLD_ID = 'default';
+	const ICONS = ['🍔','🍜','🍳','☕','🥤','🍎','🍪','👕','🏠','💧','⚡','🔥','🚗','⛽','🅿️','🚌','📚','🎮','🎬','💊','💰','📱','🛒','🎁','✂️','🧹','🐾','👶','💳','📦'];
 
 	interface CategoryChild {
 		id: number;
@@ -25,13 +25,17 @@
 	let error = $state('');
 	let success = $state('');
 
-	// Add form
-	let addMode: 'none' | 'parent' | 'child' = $state('none');
-	let addParentId: number | null = $state(null);
-	let addName = $state('');
-	let addDescription = $state('');
-	let addIcon = $state('');
-	let addColor = $state('');
+	// Modal state
+	let modalOpen = $state(false);
+	let modalMode: 'parent' | 'child' = $state('parent');
+	let modalParentId: number | null = $state(null);
+	let modalParentName = $state('');
+	let modalName = $state('');
+	let modalDescription = $state('');
+	let modalIcon = $state('');
+	let modalColor = $state('#6366f1');
+	let modalColorEnabled = $state(false);
+	let showIconPicker = $state(false);
 
 	// Edit state
 	let editingId: number | null = $state(null);
@@ -39,6 +43,10 @@
 	let editDescription = $state('');
 	let editIcon = $state('');
 	let editColor = $state('');
+	let editColorEnabled = $state(false);
+	let showEditIconPicker = $state(false);
+
+	let dialogEl: HTMLDialogElement | undefined = $state(undefined);
 
 	async function loadCategories() {
 		loading = true;
@@ -53,18 +61,42 @@
 
 	$effect(() => { loadCategories(); });
 
-	async function addCategory() {
-		if (!addName.trim()) return;
+	function openAddParent() {
+		modalMode = 'parent';
+		modalParentId = null;
+		modalParentName = '';
+		modalName = ''; modalDescription = ''; modalIcon = ''; modalColor = '#6366f1'; modalColorEnabled = false; showIconPicker = false;
+		modalOpen = true;
+		dialogEl?.showModal();
+	}
+
+	function openAddChild(parentId: number, parentName: string) {
+		modalMode = 'child';
+		modalParentId = parentId;
+		modalParentName = parentName;
+		modalName = ''; modalDescription = ''; modalIcon = ''; modalColor = '#6366f1'; modalColorEnabled = false; showIconPicker = false;
+		modalOpen = true;
+		dialogEl?.showModal();
+	}
+
+	function closeModal() {
+		modalOpen = false;
+		showIconPicker = false;
+		dialogEl?.close();
+	}
+
+	async function submitAdd() {
+		if (!modalName.trim()) return;
 		error = ''; success = '';
 		try {
 			const body: Record<string, unknown> = {
 				householdId: HOUSEHOLD_ID,
-				name: addName.trim()
+				name: modalName.trim()
 			};
-			if (addMode === 'child' && addParentId) body.parentId = addParentId;
-			if (addDescription.trim()) body.description = addDescription.trim();
-			if (addIcon.trim()) body.icon = addIcon.trim();
-			if (addColor.trim()) body.color = addColor.trim();
+			if (modalMode === 'child' && modalParentId) body.parentId = modalParentId;
+			if (modalDescription.trim()) body.description = modalDescription.trim();
+			if (modalIcon.trim()) body.icon = modalIcon.trim();
+			if (modalColorEnabled) body.color = modalColor;
 
 			const res = await fetch('/api/categories/manage', {
 				method: 'POST',
@@ -76,8 +108,8 @@
 				error = String(data?.message ?? '新增失敗');
 				return;
 			}
-			success = `已新增「${addName}」`;
-			addName = ''; addDescription = ''; addIcon = ''; addColor = ''; addMode = 'none'; addParentId = null;
+			success = `已新增「${modalName}」`;
+			closeModal();
 			await loadCategories();
 		} catch { error = '網路錯誤'; }
 	}
@@ -86,16 +118,18 @@
 		editingId = cat.id;
 		editName = cat.name;
 		editIcon = cat.icon ?? '';
-		editColor = cat.color ?? '';
+		editColor = cat.color ?? '#6366f1';
+		editColorEnabled = !!cat.color;
 		editDescription = isParent ? (cat as CategoryParent).description ?? '' : '';
+		showEditIconPicker = false;
 	}
 
 	async function saveEdit(id: number) {
 		error = ''; success = '';
 		const body: Record<string, unknown> = { id, householdId: HOUSEHOLD_ID };
 		if (editName.trim()) body.name = editName.trim();
-		if (editIcon !== undefined) body.icon = editIcon.trim() || undefined;
-		if (editColor !== undefined) body.color = editColor.trim() || undefined;
+		body.icon = editIcon.trim() || undefined;
+		body.color = editColorEnabled ? editColor : undefined;
 		if (editDescription !== undefined) body.description = editDescription.trim() || undefined;
 
 		try {
@@ -110,6 +144,7 @@
 				return;
 			}
 			editingId = null;
+			showEditIconPicker = false;
 			success = '已更新';
 			await loadCategories();
 		} catch { error = '網路錯誤'; }
@@ -133,21 +168,12 @@
 			await loadCategories();
 		} catch { error = '網路錯誤'; }
 	}
-
-	function startAddChild(parentId: number) {
-		addMode = 'child';
-		addParentId = parentId;
-		addName = ''; addIcon = ''; addColor = '';
-		tick().then(() => document.getElementById('add-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
-	}
 </script>
 
 <div class="space-y-6">
 	<div class="flex items-center justify-between">
 		<h1 class="text-2xl font-bold">分類管理</h1>
-		<button class="btn btn-primary btn-sm" onclick={() => { addMode = 'parent'; addParentId = null; addName = ''; addDescription = ''; addIcon = ''; addColor = ''; }}>
-			+ 新增大類
-		</button>
+		<button class="btn btn-primary btn-sm" onclick={openAddParent}>+ 新增大類</button>
 	</div>
 
 	{#if error}<div class="alert alert-error text-sm">{error}</div>{/if}
@@ -156,49 +182,54 @@
 	{#if loading}
 		<div class="flex justify-center py-12"><span class="loading loading-spinner loading-lg"></span></div>
 	{:else}
-		<!-- Add form -->
-		{#if addMode !== 'none'}
-			<div id="add-form" class="card bg-base-100 shadow">
-				<div class="card-body">
-					<h2 class="card-title text-lg">{addMode === 'parent' ? '新增大類' : '新增子類'}</h2>
-					<div class="flex flex-wrap gap-3 items-end">
-						<label class="form-control w-full max-w-[12rem]">
-							<div class="label"><span class="label-text">名稱</span></div>
-							<input class="input input-bordered input-sm" bind:value={addName} placeholder="分類名稱" />
-						</label>
-						{#if addMode === 'parent'}
-							<label class="form-control w-full max-w-[16rem]">
-								<div class="label"><span class="label-text">說明（AI 參考）</span></div>
-								<input class="input input-bordered input-sm" bind:value={addDescription} placeholder="涵蓋範圍" />
-							</label>
-						{/if}
-						<label class="form-control w-full max-w-[5rem]">
-							<div class="label"><span class="label-text">圖標</span></div>
-							<input class="input input-bordered input-sm" bind:value={addIcon} placeholder="🍔" />
-						</label>
-						<label class="form-control w-full max-w-[7rem]">
-							<div class="label"><span class="label-text">色碼</span></div>
-							<input class="input input-bordered input-sm" bind:value={addColor} placeholder="#FF6B6B" />
-						</label>
-						<button class="btn btn-primary btn-sm" onclick={addCategory} disabled={!addName.trim()}>新增</button>
-						<button class="btn btn-ghost btn-sm" onclick={() => { addMode = 'none'; }}>取消</button>
-					</div>
-				</div>
-			</div>
-		{/if}
-
-		<!-- Category tree -->
 		{#each categories as parent}
 			<div class="card bg-base-100 shadow">
 				<div class="card-body py-4">
 					{#if editingId === parent.id}
-						<div class="flex flex-wrap gap-3 items-end">
-							<input class="input input-bordered input-sm w-32" bind:value={editName} />
-							<input class="input input-bordered input-sm w-48" bind:value={editDescription} placeholder="說明" />
-							<input class="input input-bordered input-sm w-16" bind:value={editIcon} placeholder="icon" />
-							<input class="input input-bordered input-sm w-24" bind:value={editColor} placeholder="#color" />
-							<button class="btn btn-success btn-xs" onclick={() => saveEdit(parent.id)}>存</button>
-							<button class="btn btn-ghost btn-xs" onclick={() => { editingId = null; }}>消</button>
+						<div class="space-y-3">
+							<div class="flex flex-wrap gap-3 items-end">
+								<label class="form-control w-full max-w-[10rem]">
+									<div class="label"><span class="label-text">名稱</span></div>
+									<input class="input input-bordered input-sm" bind:value={editName} />
+								</label>
+								<label class="form-control w-full max-w-[14rem]">
+									<div class="label"><span class="label-text">說明</span></div>
+									<input class="input input-bordered input-sm" bind:value={editDescription} placeholder="涵蓋範圍" />
+								</label>
+							</div>
+							<div class="flex flex-wrap gap-3 items-center">
+								<div class="flex items-center gap-2">
+									<span class="text-sm">圖標</span>
+									<button class="btn btn-outline btn-sm min-w-[3rem]" onclick={() => showEditIconPicker = !showEditIconPicker}>
+										{editIcon || '選擇'}
+									</button>
+									{#if editIcon}<button class="btn btn-ghost btn-xs" onclick={() => editIcon = ''}>✕</button>{/if}
+								</div>
+								<div class="flex items-center gap-2">
+									<label class="flex items-center gap-1 cursor-pointer">
+										<input type="checkbox" class="checkbox checkbox-xs" bind:checked={editColorEnabled} />
+										<span class="text-sm">顏色</span>
+									</label>
+									{#if editColorEnabled}
+										<input type="color" class="w-8 h-8 rounded cursor-pointer border-0" bind:value={editColor} />
+									{/if}
+								</div>
+								<div class="ml-auto flex gap-1">
+									<button class="btn btn-success btn-sm" onclick={() => saveEdit(parent.id)}>儲存</button>
+									<button class="btn btn-ghost btn-sm" onclick={() => { editingId = null; showEditIconPicker = false; }}>取消</button>
+								</div>
+							</div>
+							{#if showEditIconPicker}
+								<div class="flex flex-wrap gap-1 p-2 bg-base-200 rounded-lg max-w-sm">
+									{#each ICONS as icon}
+										<button
+											class="btn btn-ghost btn-sm text-lg px-1.5"
+											class:btn-active={editIcon === icon}
+											onclick={() => { editIcon = icon; showEditIconPicker = false; }}
+										>{icon}</button>
+									{/each}
+								</div>
+							{/if}
 						</div>
 					{:else}
 						<div class="flex items-center gap-2">
@@ -209,7 +240,7 @@
 							<div class="ml-auto flex gap-1">
 								<button class="btn btn-ghost btn-xs" onclick={() => startEdit(parent, true)}>編輯</button>
 								<button class="btn btn-ghost btn-xs text-error" onclick={() => deleteCategory(parent.id, parent.name)}>刪除</button>
-								<button class="btn btn-ghost btn-xs" onclick={() => startAddChild(parent.id)}>+ 子類</button>
+								<button class="btn btn-primary btn-xs" onclick={() => openAddChild(parent.id, parent.name)}>+ 子類</button>
 							</div>
 						</div>
 					{/if}
@@ -218,12 +249,35 @@
 						<div class="ml-6 mt-2 space-y-1">
 							{#each parent.children as child}
 								{#if editingId === child.id}
-									<div class="flex gap-2 items-center">
-										<input class="input input-bordered input-xs w-28" bind:value={editName} />
-										<input class="input input-bordered input-xs w-14" bind:value={editIcon} placeholder="icon" />
-										<input class="input input-bordered input-xs w-20" bind:value={editColor} placeholder="#color" />
-										<button class="btn btn-success btn-xs" onclick={() => saveEdit(child.id)}>存</button>
-										<button class="btn btn-ghost btn-xs" onclick={() => { editingId = null; }}>消</button>
+									<div class="space-y-2 py-2 px-2 bg-base-200 rounded">
+										<div class="flex flex-wrap gap-2 items-center">
+											<input class="input input-bordered input-xs w-28" bind:value={editName} />
+											<div class="flex items-center gap-1">
+												<button class="btn btn-outline btn-xs min-w-[2.5rem]" onclick={() => showEditIconPicker = !showEditIconPicker}>
+													{editIcon || '📌'}
+												</button>
+												{#if editIcon}<button class="btn btn-ghost btn-xs" onclick={() => editIcon = ''}>✕</button>{/if}
+											</div>
+											<label class="flex items-center gap-1 cursor-pointer">
+												<input type="checkbox" class="checkbox checkbox-xs" bind:checked={editColorEnabled} />
+												{#if editColorEnabled}
+													<input type="color" class="w-6 h-6 rounded cursor-pointer border-0" bind:value={editColor} />
+												{/if}
+											</label>
+											<button class="btn btn-success btn-xs" onclick={() => saveEdit(child.id)}>存</button>
+											<button class="btn btn-ghost btn-xs" onclick={() => { editingId = null; showEditIconPicker = false; }}>消</button>
+										</div>
+										{#if showEditIconPicker}
+											<div class="flex flex-wrap gap-1 p-2 bg-base-100 rounded-lg max-w-xs">
+												{#each ICONS as icon}
+													<button
+														class="btn btn-ghost btn-xs text-base px-1"
+														class:btn-active={editIcon === icon}
+														onclick={() => { editIcon = icon; showEditIconPicker = false; }}
+													>{icon}</button>
+												{/each}
+											</div>
+										{/if}
 									</div>
 								{:else}
 									<div class="flex items-center gap-2 py-1 px-2 rounded hover:bg-base-200">
@@ -250,3 +304,69 @@
 		{/if}
 	{/if}
 </div>
+
+<!-- Add Modal -->
+<dialog bind:this={dialogEl} class="modal" onclose={closeModal}>
+	<div class="modal-box max-w-sm">
+		<h3 class="font-bold text-lg">
+			{modalMode === 'parent' ? '新增大類' : `新增子類 → ${modalParentName}`}
+		</h3>
+		<div class="space-y-4 mt-4">
+			<label class="form-control w-full">
+				<div class="label"><span class="label-text">名稱 *</span></div>
+				<input class="input input-bordered" bind:value={modalName} placeholder="分類名稱" />
+			</label>
+
+			{#if modalMode === 'parent'}
+				<label class="form-control w-full">
+					<div class="label"><span class="label-text">說明（AI 分類參考）</span></div>
+					<input class="input input-bordered" bind:value={modalDescription} placeholder="涵蓋範圍描述" />
+				</label>
+			{/if}
+
+			<!-- Icon picker -->
+			<div>
+				<div class="label"><span class="label-text">圖標</span></div>
+				<div class="flex items-center gap-2">
+					<button class="btn btn-outline min-w-[3rem] text-lg" onclick={() => showIconPicker = !showIconPicker}>
+						{modalIcon || '選擇'}
+					</button>
+					{#if modalIcon}
+						<button class="btn btn-ghost btn-sm" onclick={() => modalIcon = ''}>清除</button>
+					{/if}
+				</div>
+				{#if showIconPicker}
+					<div class="flex flex-wrap gap-1 p-2 mt-2 bg-base-200 rounded-lg">
+						{#each ICONS as icon}
+							<button
+								class="btn btn-ghost btn-sm text-lg px-1.5"
+								class:btn-active={modalIcon === icon}
+								onclick={() => { modalIcon = icon; showIconPicker = false; }}
+							>{icon}</button>
+						{/each}
+					</div>
+				{/if}
+			</div>
+
+			<!-- Color picker -->
+			<div>
+				<div class="flex items-center gap-2">
+					<label class="flex items-center gap-2 cursor-pointer">
+						<input type="checkbox" class="checkbox checkbox-sm" bind:checked={modalColorEnabled} />
+						<span class="label-text">自訂顏色</span>
+					</label>
+					{#if modalColorEnabled}
+						<input type="color" class="w-10 h-10 rounded cursor-pointer border-0" bind:value={modalColor} />
+						<span class="text-sm text-base-content/60">{modalColor}</span>
+					{/if}
+				</div>
+			</div>
+		</div>
+
+		<div class="modal-action">
+			<button class="btn btn-ghost" onclick={closeModal}>取消</button>
+			<button class="btn btn-primary" onclick={submitAdd} disabled={!modalName.trim()}>新增</button>
+		</div>
+	</div>
+	<form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
