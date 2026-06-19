@@ -13,7 +13,7 @@
 
 ## M1 — 可部署 / 可登入 / 可連 DB 空殼
 
-- [ ] T1.1 D1 migration 初版 schema | 依賴: T0.2 | 狀態: todo
+- [x] T1.1 D1 migration 初版 schema | 依賴: T0.2 | 狀態: done
       驗收: `wrangler d1 migrations apply` 本機可重現、可重跑
 - [ ] T1.2 admin bootstrap seed + allowlist | 依賴: T1.1 | 狀態: todo
       驗收: seed 後 D1 有第一位 admin；非 allowlist email 標記不可登入
