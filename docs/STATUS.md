@@ -114,3 +114,18 @@ PRD: [docs/prd/Category-Redesign.md](docs/prd/Category-Redesign.md)
       驗收: 月報可按大類聚合也可按子類展開；占比加總 100%
 - [x] T7.9 刪除清理 + 回歸測試 | 依賴: T7.4, T7.6, T7.7, T7.8 | 狀態: done
       驗收: 刪除分類後費用變未分類、aliases 軟刪、pending ai_suggestions 拒絕；既有 e2e 仍綠
+
+## M8 — UED 改善 Phase 1（UX 止血）
+
+計劃: `~/.claude/plans/ux-ui-ued-swirling-pizza.md`
+
+- [x] T8.1 分類刪除確認 modal | 依賴: 無 | 狀態: done
+      驗收: 點分類刪除跳確認 modal，文案顯示分類名稱與級聯影響；確認才真正刪除（截圖驗證）
+- [x] T8.2 導覽當前頁高亮 | 依賴: 無 | 狀態: done
+      驗收: 桌面/手機選單，當前路由連結反白（light pill；corporate menu-active 與 navbar 同色故改用自訂樣式，截圖驗證）
+- [x] T8.3 按鈕標籤全字（存/消→儲存/取消）| 依賴: 無 | 狀態: done
+      驗收: 子分類與明細 inline edit 按鈕為「儲存／取消」全字
+- [x] T8.4 匯入新紀錄可展開全部 | 依賴: 無 | 狀態: done
+      驗收: 預覽新紀錄預設折疊 20 筆，可切換顯示全部 n 筆；每次上傳重置
+- [x] T8.5 可關閉 alert | 依賴: 無 | 狀態: done
+      驗收: 分類頁 success/error alert 有關閉鈕，success 5s 自動消失

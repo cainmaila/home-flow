@@ -61,6 +61,13 @@
 
 	$effect(() => { loadCategories(); });
 
+	// Auto-dismiss success toast after 5s
+	$effect(() => {
+		if (!success) return;
+		const t = setTimeout(() => (success = ''), 5000);
+		return () => clearTimeout(t);
+	});
+
 	function openAddParent() {
 		modalMode = 'parent';
 		modalParentId = null;
@@ -150,8 +157,14 @@
 		} catch { error = '網路錯誤'; }
 	}
 
-	async function deleteCategory(id: number, name: string) {
-		error = ''; success = '';
+	// Delete confirm
+	let pendingDelete: { id: number; name: string; isParent: boolean } | null = $state(null);
+	let deleting = $state(false);
+
+	async function confirmDelete() {
+		if (!pendingDelete) return;
+		const { id, name } = pendingDelete;
+		error = ''; success = ''; deleting = true;
 		try {
 			const res = await fetch('/api/categories/manage', {
 				method: 'DELETE',
@@ -165,8 +178,10 @@
 			}
 			const result = (await res.json()) as { deleted_categories: number; affected_expenses: number };
 			success = `已刪除「${name}」（${result.deleted_categories} 個分類，${result.affected_expenses} 筆費用受影響）`;
+			pendingDelete = null;
 			await loadCategories();
 		} catch { error = '網路錯誤'; }
+		finally { deleting = false; }
 	}
 </script>
 
@@ -176,8 +191,8 @@
 		<button class="btn btn-primary btn-sm" onclick={openAddParent}>+ 新增大類</button>
 	</div>
 
-	{#if error}<div class="alert alert-error text-sm">{error}</div>{/if}
-	{#if success}<div class="alert alert-success text-sm">{success}</div>{/if}
+	{#if error}<div class="alert alert-error text-sm"><span>{error}</span><button class="btn btn-ghost btn-xs ml-auto" aria-label="關閉" onclick={() => (error = '')}>✕</button></div>{/if}
+	{#if success}<div class="alert alert-success text-sm"><span>{success}</span><button class="btn btn-ghost btn-xs ml-auto" aria-label="關閉" onclick={() => (success = '')}>✕</button></div>{/if}
 
 	{#if loading}
 		<div class="flex justify-center py-12"><span class="loading loading-spinner loading-lg"></span></div>
@@ -239,7 +254,7 @@
 							{#if parent.description}<span class="text-xs text-base-content/50">— {parent.description}</span>{/if}
 							<div class="ml-auto flex gap-1">
 								<button class="btn btn-ghost btn-xs" onclick={() => startEdit(parent, true)}>編輯</button>
-								<button class="btn btn-ghost btn-xs text-error" onclick={() => deleteCategory(parent.id, parent.name)}>刪除</button>
+								<button class="btn btn-ghost btn-xs text-error" onclick={() => pendingDelete = { id: parent.id, name: parent.name, isParent: true }}>刪除</button>
 								<button class="btn btn-primary btn-xs" onclick={() => openAddChild(parent.id, parent.name)}>+ 子類</button>
 							</div>
 						</div>
@@ -264,8 +279,8 @@
 													<input type="color" class="w-6 h-6 rounded cursor-pointer border-0" bind:value={editColor} />
 												{/if}
 											</label>
-											<button class="btn btn-success btn-xs" onclick={() => saveEdit(child.id)}>存</button>
-											<button class="btn btn-ghost btn-xs" onclick={() => { editingId = null; showEditIconPicker = false; }}>消</button>
+											<button class="btn btn-success btn-xs" onclick={() => saveEdit(child.id)}>儲存</button>
+											<button class="btn btn-ghost btn-xs" onclick={() => { editingId = null; showEditIconPicker = false; }}>取消</button>
 										</div>
 										{#if showEditIconPicker}
 											<div class="flex flex-wrap gap-1 p-2 bg-base-100 rounded-lg max-w-xs">
@@ -286,7 +301,7 @@
 										<span class="text-sm">{child.name}</span>
 										<div class="ml-auto flex gap-1">
 											<button class="btn btn-ghost btn-xs" onclick={() => startEdit(child, false)}>編輯</button>
-											<button class="btn btn-ghost btn-xs text-error" onclick={() => deleteCategory(child.id, child.name)}>刪除</button>
+											<button class="btn btn-ghost btn-xs text-error" onclick={() => pendingDelete = { id: child.id, name: child.name, isParent: false }}>刪除</button>
 										</div>
 									</div>
 								{/if}
@@ -370,3 +385,21 @@
 	</div>
 	<form method="dialog" class="modal-backdrop"><button>close</button></form>
 </dialog>
+
+<!-- Delete confirm modal -->
+{#if pendingDelete}
+	<div class="modal modal-open">
+		<div class="modal-box">
+			<h3 class="font-bold text-lg">確認刪除</h3>
+			<p class="py-4">
+				確定要刪除「<strong>{pendingDelete.name}</strong>」嗎？
+				{#if pendingDelete.isParent}其子分類會一併刪除，{/if}相關費用會變成未分類。此操作無法復原。
+			</p>
+			<div class="modal-action">
+				<button class="btn btn-ghost" onclick={() => (pendingDelete = null)}>取消</button>
+				<button class="btn btn-error" onclick={confirmDelete} disabled={deleting}>刪除</button>
+			</div>
+		</div>
+		<button type="button" class="modal-backdrop" aria-label="關閉" onclick={() => (pendingDelete = null)}></button>
+	</div>
+{/if}

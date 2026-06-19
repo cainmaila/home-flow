@@ -1,5 +1,20 @@
 <script lang="ts">
+	import { page } from '$app/stores';
 	let { children } = $props();
+
+	const links = [
+		{ href: '/reports', label: '月報' },
+		{ href: '/reports/details', label: '明細' },
+		{ href: '/import', label: '匯入' },
+		{ href: '/corrections', label: '校正' },
+		{ href: '/import/history', label: '歷程' },
+		{ href: '/settings/categories', label: '分類' }
+	];
+
+	// corporate theme's menu-active bg == navbar neutral bg, so it's invisible here.
+	// Use a visible light pill instead.
+	const activeCls = (href: string) =>
+		$page.url.pathname === href ? 'bg-white/15 font-semibold' : '';
 </script>
 
 <div class="min-h-screen bg-base-200">
@@ -13,24 +28,18 @@
 				</div>
 				<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 				<ul tabindex="0" class="menu menu-sm dropdown-content bg-neutral rounded-box z-10 mt-3 w-52 p-2 shadow">
-					<li><a href="/reports">月報</a></li>
-					<li><a href="/reports/details">明細</a></li>
-					<li><a href="/import">匯入</a></li>
-					<li><a href="/corrections">校正</a></li>
-					<li><a href="/import/history">歷程</a></li>
-					<li><a href="/settings/categories">分類</a></li>
+					{#each links as link}
+						<li><a href={link.href} class={activeCls(link.href)}>{link.label}</a></li>
+					{/each}
 				</ul>
 			</div>
 			<a href="/reports" class="btn btn-ghost text-xl">Home Flow</a>
 		</div>
 		<div class="navbar-center hidden lg:flex">
 			<ul class="menu menu-horizontal px-1">
-				<li><a href="/reports">月報</a></li>
-				<li><a href="/reports/details">明細</a></li>
-				<li><a href="/import">匯入</a></li>
-				<li><a href="/corrections">校正</a></li>
-				<li><a href="/import/history">歷程</a></li>
-					<li><a href="/settings/categories">分類</a></li>
+				{#each links as link}
+					<li><a href={link.href} class={activeCls(link.href)}>{link.label}</a></li>
+				{/each}
 			</ul>
 		</div>
 		<div class="navbar-end">

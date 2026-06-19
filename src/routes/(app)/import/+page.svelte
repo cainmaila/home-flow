@@ -37,6 +37,7 @@
 	} | null = $state(null);
 
 	let filename: string = $state('');
+	let showAllNew = $state(false);
 
 	async function handleUpload() {
 		const file = fileInput?.files?.[0];
@@ -57,6 +58,7 @@
 		uploadResult = null;
 		previewResult = null;
 		commitResult = null;
+		showAllNew = false;
 		filename = file.name;
 
 		const formData = new FormData();
@@ -259,14 +261,22 @@
 				{/if}
 
 				{#if previewResult.records.some((r) => r.status === 'new')}
-					<h3 class="font-semibold mt-4">新增記錄（前 20 筆）</h3>
+					{@const newRecords = previewResult.records.filter((r) => r.status === 'new')}
+					<h3 class="font-semibold mt-4 flex items-center gap-2">
+						新增記錄（{newRecords.length} 筆）
+						{#if newRecords.length > 20}
+							<button class="btn btn-ghost btn-xs" onclick={() => (showAllNew = !showAllNew)}>
+								{showAllNew ? '只顯示前 20 筆' : '顯示全部'}
+							</button>
+						{/if}
+					</h3>
 					<div class="overflow-x-auto">
 						<table class="table table-sm">
 							<thead>
 								<tr><th>日期</th><th>分類</th><th class="text-right">金額</th></tr>
 							</thead>
 							<tbody>
-								{#each previewResult.records.filter((r) => r.status === 'new').slice(0, 20) as pr}
+								{#each (showAllNew ? newRecords : newRecords.slice(0, 20)) as pr}
 									<tr>
 										<td>{pr.record.expense_date}</td>
 										<td>{pr.record.raw_category}</td>

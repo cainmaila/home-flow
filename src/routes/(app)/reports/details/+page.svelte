@@ -331,7 +331,7 @@
 												<input type="checkbox" class="checkbox checkbox-xs" bind:checked={editFixed} />
 											</td>
 											<td class="flex gap-1">
-												<button class="btn btn-success btn-xs" onclick={saveEdit} disabled={saving}>存</button>
+												<button class="btn btn-success btn-xs" onclick={saveEdit} disabled={saving}>儲存</button>
 												<button class="btn btn-ghost btn-xs" onclick={cancelEdit}>取消</button>
 											</td>
 										</tr>
