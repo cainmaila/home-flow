@@ -83,7 +83,19 @@ Rules:
 - Close a milestone only when all its 驗收 gates are green, then mark the milestone段落 `done`.
 - New work that isn't in STATUS.md → add the line first, then do it.
 
-Plan of record: `/Users/cain/.claude/plans/delegated-inventing-wind.md`.
+Plan of record: `docs/Execution-Plan.md`.
+
+## 6. Code Review
+
+**Every task's code must pass a Ponytail review before marking `done`.**
+
+After implementation, spawn a `caveman:cavecrew-reviewer` agent with Ponytail mode to review the diff. Focus on:
+- Over-engineering: abstractions, config, or flexibility nobody asked for.
+- Dead code or unused imports introduced by this task.
+- Shorter alternatives the implementation missed (stdlib, platform native, one-liner).
+- Security at trust boundaries (user input, external APIs).
+
+If the review flags issues, fix before `done`. Don't skip review for "small" changes — small changes are fast to review.
 
 ---
 

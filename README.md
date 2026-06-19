@@ -128,6 +128,7 @@ AI 第一版限制：
 - [docs/prd/Architecture.md](docs/prd/Architecture.md)
 - [docs/prd/Data-Rules.md](docs/prd/Data-Rules.md)
 - [docs/prd/Tasks.md](docs/prd/Tasks.md)
+- [docs/Execution-Plan.md](docs/Execution-Plan.md)
 - [docs/費用.csv](docs/%E8%B2%BB%E7%94%A8.csv)
 
 ## 開發順序建議
