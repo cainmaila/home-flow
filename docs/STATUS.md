@@ -138,3 +138,16 @@ PRD: [docs/prd/Category-Redesign.md](docs/prd/Category-Redesign.md)
       驗收: 月報 doughnut/bar 改用與品牌協調的調色盤，選中月份 emerald 強調（截圖驗證）
 - [ ] T9.3 元件微一致化（按鈕尺寸階層、label-text、input-error、badge 語意）| 依賴: T9.1 | 狀態: todo
       驗收: 抽查表單驗證顯示 input-error；按鈕尺寸一致
+
+## M10 — UED 改善 Phase 3（互動優化）
+
+- [x] T10.1 inline 編輯鍵盤操作 + 明確狀態 | 依賴: 無 | 狀態: done
+      驗收: 明細/分類編輯列 Enter 儲存、Esc 取消；編輯列加 primary ring 明顯標示（截圖驗證）
+- [x] T10.4 載入提示文字 | 依賴: 無 | 狀態: done
+      驗收: 月報/明細/分類/校正 spinner 旁顯示「載入中…」
+- [x] T10.5 a11y：導覽 dropdown ARIA + modal backdrop 改 button | 依賴: 無 | 狀態: done
+      驗收: dropdown 有 aria-haspopup/label；刪除 modal backdrop 為 button，svelte-check 0 warnings
+- [ ] T10.2 明細/校正批次操作 | 依賴: 無 | 狀態: todo
+      驗收: 多選後可批次套用分類（feature 級，獨立任務）
+- [ ] T10.3 排序指示 icon 化 | 依賴: 無 | 狀態: todo
+      驗收: ▲▼ 換清楚 icon

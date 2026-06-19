@@ -121,6 +121,11 @@
 		} catch { error = '網路錯誤'; }
 	}
 
+	function editKeydown(e: KeyboardEvent, id: number) {
+		if (e.key === 'Enter') { e.preventDefault(); saveEdit(id); }
+		else if (e.key === 'Escape') { e.preventDefault(); editingId = null; showEditIconPicker = false; }
+	}
+
 	function startEdit(cat: CategoryParent | CategoryChild, isParent: boolean) {
 		editingId = cat.id;
 		editName = cat.name;
@@ -195,7 +200,7 @@
 	{#if success}<div class="alert alert-success text-sm"><span>{success}</span><button class="btn btn-ghost btn-xs ml-auto" aria-label="關閉" onclick={() => (success = '')}>✕</button></div>{/if}
 
 	{#if loading}
-		<div class="flex justify-center py-12"><span class="loading loading-spinner loading-lg"></span></div>
+		<div class="flex justify-center items-center gap-3 py-12 text-base-content/60"><span class="loading loading-spinner loading-lg"></span> 載入中…</div>
 	{:else}
 		{#each categories as parent}
 			<div class="card bg-base-100 shadow">
@@ -205,11 +210,11 @@
 							<div class="flex flex-wrap gap-3 items-end">
 								<label class="form-control w-full max-w-[10rem]">
 									<div class="label"><span class="label-text">名稱</span></div>
-									<input class="input input-bordered input-sm" bind:value={editName} />
+									<input class="input input-bordered input-sm" bind:value={editName} onkeydown={(e) => editKeydown(e, parent.id)} />
 								</label>
 								<label class="form-control w-full max-w-[14rem]">
 									<div class="label"><span class="label-text">說明</span></div>
-									<input class="input input-bordered input-sm" bind:value={editDescription} placeholder="涵蓋範圍" />
+									<input class="input input-bordered input-sm" bind:value={editDescription} placeholder="涵蓋範圍" onkeydown={(e) => editKeydown(e, parent.id)} />
 								</label>
 							</div>
 							<div class="flex flex-wrap gap-3 items-center">
@@ -266,7 +271,7 @@
 								{#if editingId === child.id}
 									<div class="space-y-2 py-2 px-2 bg-base-200 rounded">
 										<div class="flex flex-wrap gap-2 items-center">
-											<input class="input input-bordered input-xs w-28" bind:value={editName} />
+											<input class="input input-bordered input-xs w-28" bind:value={editName} onkeydown={(e) => editKeydown(e, child.id)} />
 											<div class="flex items-center gap-1">
 												<button class="btn btn-outline btn-xs min-w-[2.5rem]" onclick={() => showEditIconPicker = !showEditIconPicker}>
 													{editIcon || '📌'}

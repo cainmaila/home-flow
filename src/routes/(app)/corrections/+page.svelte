@@ -217,8 +217,8 @@
 	<h1 class="text-2xl font-bold">分類校正</h1>
 
 	{#if loading}
-		<div class="flex justify-center py-12">
-			<span class="loading loading-spinner loading-lg"></span>
+		<div class="flex justify-center items-center gap-3 py-12 text-base-content/60">
+			<span class="loading loading-spinner loading-lg"></span> 載入中…
 		</div>
 	{:else if errorMessage}
 		<div class="alert alert-error">{errorMessage}</div>

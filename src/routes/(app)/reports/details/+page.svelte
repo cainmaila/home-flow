@@ -163,6 +163,11 @@
 		editingId = null;
 	}
 
+	function editKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter') { e.preventDefault(); saveEdit(); }
+		else if (e.key === 'Escape') { e.preventDefault(); cancelEdit(); }
+	}
+
 	async function saveEdit() {
 		if (!editingId) return;
 		saving = true;
@@ -275,8 +280,8 @@
 	</div>
 
 	{#if loading}
-		<div class="flex justify-center py-12">
-			<span class="loading loading-spinner loading-lg"></span>
+		<div class="flex justify-center items-center gap-3 py-12 text-base-content/60">
+			<span class="loading loading-spinner loading-lg"></span> 載入中…
 		</div>
 	{:else if errorMessage}
 		<div class="alert alert-error">{errorMessage}</div>
@@ -308,12 +313,12 @@
 							<tbody>
 								{#each sortedExpenses as exp}
 									{#if editingId === exp.id}
-										<tr class="bg-base-200">
+										<tr class="bg-base-200 ring-2 ring-primary/40">
 											<td>
-												<input type="date" class="input input-bordered input-xs w-36" bind:value={editDate} />
+												<input type="date" class="input input-bordered input-xs w-36" bind:value={editDate} onkeydown={editKeydown} />
 											</td>
 											<td>
-												<select class="select select-bordered select-xs w-40" bind:value={editCategoryId}>
+												<select class="select select-bordered select-xs w-40" bind:value={editCategoryId} onkeydown={editKeydown}>
 													<option value={null}>未分類</option>
 													{#each categories as group}
 														<optgroup label={group.name}>
@@ -325,7 +330,7 @@
 												</select>
 											</td>
 											<td>
-												<input type="number" class="input input-bordered input-xs w-24 text-right" bind:value={editAmount} />
+												<input type="number" class="input input-bordered input-xs w-24 text-right" bind:value={editAmount} onkeydown={editKeydown} />
 											</td>
 											<td>
 												<input type="checkbox" class="checkbox checkbox-xs" bind:checked={editFixed} />
@@ -380,6 +385,6 @@
 				<button class="btn btn-error" onclick={doDelete} disabled={saving}>刪除</button>
 			</div>
 		</div>
-		<div class="modal-backdrop" onclick={() => (deletingId = null)}></div>
+		<button type="button" class="modal-backdrop" aria-label="關閉" onclick={() => (deletingId = null)}></button>
 	</div>
 {/if}
