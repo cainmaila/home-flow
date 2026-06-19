@@ -84,8 +84,8 @@
       驗收: 模擬額度觸發對應行為
 - [x] T5.6 AI 建議審核 UI（校正頁 surface pending 建議 + 匯入結果 AI 摘要） | 依賴: T5.4 | 狀態: done
       驗收: 匯入含未匹配分類後，校正頁可採納/忽略低信心建議，採納後 expenses 回填
-- [ ] T5.7 移除外洩金鑰 + 改寫歷史 | 依賴: 無 | 狀態: todo
-      驗收: git log -p --all 查無 GOOGLE/GEMINI key；舊 key 已於 Google 端作廢
+- [ ] T5.7 移除外洩金鑰 + 改寫歷史 | 依賴: 無 | 狀態: wip
+      驗收: git log -p --all 查無 GOOGLE/GEMINI key（✓ 已改寫歷史並 force push）；舊 key 已於 Google 端作廢（待人工確認）
 
 ## M6 — 測試
 
