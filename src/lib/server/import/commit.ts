@@ -1,5 +1,15 @@
 import type { PreviewRecord } from './preview';
 import { resolveCategoriesForImport } from '../category/resolve';
+import { isAIEnabled, getAutoAcceptThreshold } from '../ai/config';
+import { suggestCategories } from '../ai/gemini';
+import { isAutoSuggestDisabled, isQuotaExceeded } from '../ai/quota';
+import { STANDARD_CATEGORIES } from '$lib/config/categories';
+
+export interface AISuggestionResult {
+	autoAccepted: number;
+	pending: number;
+	total: number;
+}
 
 export interface CommitResult {
 	importId: string;
@@ -8,6 +18,7 @@ export interface CommitResult {
 	updated: number;
 	skipped: number;
 	categoryResolution?: { resolved: number; pending: number };
+	aiSuggestions?: AISuggestionResult;
 }
 
 /**
@@ -22,7 +33,8 @@ export async function commitImport(
 	db: D1Database,
 	importId: string,
 	householdId: string,
-	records: PreviewRecord[]
+	records: PreviewRecord[],
+	env?: App.Platform['env']
 ): Promise<CommitResult> {
 	let inserted = 0;
 	let duplicates = 0;
@@ -97,5 +109,108 @@ export async function commitImport(
 	// Apply category resolution to newly imported expenses (T3.5)
 	const categoryResolution = await resolveCategoriesForImport(db, householdId, importId);
 
-	return { importId, inserted, duplicates, updated, skipped, categoryResolution };
+	// T5.4: Post-import AI suggestions for unmatched categories
+	let aiSuggestions: AISuggestionResult | undefined;
+	if (env && isAIEnabled(env) && !isQuotaExceeded() && !isAutoSuggestDisabled()) {
+		aiSuggestions = await generatePostImportSuggestions(
+			db,
+			importId,
+			householdId,
+			env.GOOGLE_AI_API_KEY!,
+			getAutoAcceptThreshold(env)
+		);
+	}
+
+	return { importId, inserted, duplicates, updated, skipped, categoryResolution, aiSuggestions };
+}
+
+/**
+ * T5.4: After commit, find unmatched raw_categories from this import,
+ * call Gemini for suggestions, auto-accept high confidence, store low confidence as pending.
+ */
+async function generatePostImportSuggestions(
+	db: D1Database,
+	importId: string,
+	householdId: string,
+	apiKey: string,
+	threshold: number
+): Promise<AISuggestionResult> {
+	// Find unmatched raw_categories from this import
+	const rows = await db
+		.prepare(
+			`SELECT DISTINCT raw_category FROM expenses
+			 WHERE source_import_id = ? AND household_id = ? AND normalized_category IS NULL`
+		)
+		.bind(importId, householdId)
+		.all<{ raw_category: string }>();
+
+	const unmatched = rows.results.map((r) => r.raw_category);
+	if (unmatched.length === 0) return { autoAccepted: 0, pending: 0, total: 0 };
+
+	const suggestions = await suggestCategories(unmatched, [...STANDARD_CATEGORIES], apiKey);
+	if (suggestions.length === 0) return { autoAccepted: 0, pending: 0, total: 0 };
+
+	let autoAccepted = 0;
+	let pending = 0;
+
+	for (const s of suggestions) {
+		if (s.confidence >= threshold) {
+			// High confidence: auto-write to category_aliases
+			await db
+				.prepare(
+					`INSERT INTO category_aliases (id, household_id, raw_category, normalized_category, source)
+					 VALUES (?, ?, ?, ?, 'ai_auto')
+					 ON CONFLICT (household_id, raw_category) DO UPDATE SET normalized_category = excluded.normalized_category, source = 'ai_auto'`
+				)
+				.bind(crypto.randomUUID(), householdId, s.raw_category, s.suggested_category)
+				.run();
+
+			// Update expenses with this raw_category
+			await db
+				.prepare(
+					`UPDATE expenses SET normalized_category = ?, updated_at = datetime('now')
+					 WHERE household_id = ? AND raw_category = ? AND normalized_category IS NULL`
+				)
+				.bind(s.suggested_category, householdId, s.raw_category)
+				.run();
+
+			// Store as accepted suggestion for audit trail
+			await db
+				.prepare(
+					`INSERT INTO ai_suggestions (id, household_id, import_id, raw_category, suggested_category, confidence, status, resolved_at)
+					 VALUES (?, ?, ?, ?, ?, ?, 'accepted', datetime('now'))`
+				)
+				.bind(
+					crypto.randomUUID(),
+					householdId,
+					importId,
+					s.raw_category,
+					s.suggested_category,
+					s.confidence
+				)
+				.run();
+
+			autoAccepted++;
+		} else {
+			// Low confidence: store as pending for manual review
+			await db
+				.prepare(
+					`INSERT INTO ai_suggestions (id, household_id, import_id, raw_category, suggested_category, confidence, status)
+					 VALUES (?, ?, ?, ?, ?, ?, 'pending')`
+				)
+				.bind(
+					crypto.randomUUID(),
+					householdId,
+					importId,
+					s.raw_category,
+					s.suggested_category,
+					s.confidence
+				)
+				.run();
+
+			pending++;
+		}
+	}
+
+	return { autoAccepted, pending, total: suggestions.length };
 }

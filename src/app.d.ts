@@ -17,6 +17,9 @@ declare global {
 				GOOGLE_CLIENT_SECRET: string;
 				SESSION_SECRET: string;
 				SESSION_MAX_AGE_DAYS?: string;
+				GOOGLE_AI_API_KEY?: string;
+				AI_FEATURE_ENABLED?: string;
+				AI_AUTO_ACCEPT_THRESHOLD?: string;
 			};
 		}
 	}

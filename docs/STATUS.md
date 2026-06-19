@@ -72,13 +72,13 @@
 
 ## M5 — AI 輔助
 
-- [ ] T5.1 Gemini server proxy | 依賴: T2.6 | 狀態: todo
+- [x] T5.1 Gemini server proxy | 依賴: T2.6 | 狀態: done
       驗收: 前端 bundle 無 key；前端無直連第三方
-- [ ] T5.2 feature flag | 依賴: T5.1 | 狀態: todo
+- [x] T5.2 feature flag | 依賴: T5.1 | 狀態: done
       驗收: 關閉後匯入／校正／報表照常
-- [ ] T5.3 限流 + fallback + 自動停用 | 依賴: T5.2 | 狀態: todo
+- [x] T5.3 限流 + fallback + 自動停用 | 依賴: T5.2 | 狀態: done
       驗收: 模擬失敗時降級不崩
-- [ ] T5.4 匯入後 AI 分類建議 | 依賴: T5.3, T3.2 | 狀態: todo
+- [x] T5.4 匯入後 AI 分類建議 | 依賴: T5.3, T3.2 | 狀態: done
       驗收: 高信心自動採納、低信心需人工確認
-- [ ] T5.5 額度監控 | 依賴: T5.4 | 狀態: todo
+- [x] T5.5 額度監控 | 依賴: T5.4 | 狀態: done
       驗收: 模擬額度觸發對應行為

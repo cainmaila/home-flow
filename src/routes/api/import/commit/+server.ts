@@ -36,6 +36,6 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 		throw error(400, `Import status is '${importJob.status}', expected 'previewed'`);
 	}
 
-	const result = await commitImport(db, importId, householdId, records);
+	const result = await commitImport(db, importId, householdId, records, platform?.env);
 	return json(result);
 };
