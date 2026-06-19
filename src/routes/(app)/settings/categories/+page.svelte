@@ -136,7 +136,10 @@
 		showEditIconPicker = false;
 	}
 
+	let editNameInvalid = $derived(editingId !== null && editName.trim() === '');
+
 	async function saveEdit(id: number) {
+		if (!editName.trim()) return; // empty name no-ops silently otherwise
 		error = ''; success = '';
 		const body: Record<string, unknown> = { id, householdId: HOUSEHOLD_ID };
 		if (editName.trim()) body.name = editName.trim();
@@ -210,7 +213,7 @@
 							<div class="flex flex-wrap gap-3 items-end">
 								<label class="form-control w-full max-w-[10rem]">
 									<div class="label"><span class="label-text">名稱</span></div>
-									<input class="input input-bordered input-sm" bind:value={editName} onkeydown={(e) => editKeydown(e, parent.id)} />
+									<input class="input input-bordered input-sm" class:input-error={editNameInvalid} bind:value={editName} onkeydown={(e) => editKeydown(e, parent.id)} />
 								</label>
 								<label class="form-control w-full max-w-[14rem]">
 									<div class="label"><span class="label-text">說明</span></div>
@@ -219,7 +222,7 @@
 							</div>
 							<div class="flex flex-wrap gap-3 items-center">
 								<div class="flex items-center gap-2">
-									<span class="text-sm">圖標</span>
+									<span class="label-text">圖標</span>
 									<button class="btn btn-outline btn-sm min-w-[3rem]" onclick={() => showEditIconPicker = !showEditIconPicker}>
 										{editIcon || '選擇'}
 									</button>
@@ -228,7 +231,7 @@
 								<div class="flex items-center gap-2">
 									<label class="flex items-center gap-1 cursor-pointer">
 										<input type="checkbox" class="checkbox checkbox-xs" bind:checked={editColorEnabled} />
-										<span class="text-sm">顏色</span>
+										<span class="label-text">顏色</span>
 									</label>
 									{#if editColorEnabled}
 										<input type="color" class="w-8 h-8 rounded cursor-pointer border-0" bind:value={editColor} />
@@ -271,7 +274,7 @@
 								{#if editingId === child.id}
 									<div class="space-y-2 py-2 px-2 bg-base-200 rounded">
 										<div class="flex flex-wrap gap-2 items-center">
-											<input class="input input-bordered input-xs w-28" bind:value={editName} onkeydown={(e) => editKeydown(e, child.id)} />
+											<input class="input input-bordered input-xs w-28" class:input-error={editNameInvalid} bind:value={editName} onkeydown={(e) => editKeydown(e, child.id)} />
 											<div class="flex items-center gap-1">
 												<button class="btn btn-outline btn-xs min-w-[2.5rem]" onclick={() => showEditIconPicker = !showEditIconPicker}>
 													{editIcon || '📌'}

@@ -136,8 +136,8 @@ PRD: [docs/prd/Category-Redesign.md](docs/prd/Category-Redesign.md)
       驗收: app.css 定義品牌 token（emerald primary、ink neutral、cool base、depth 陰影、圓角 box），脫離 corporate 預設藍；app.html data-theme 同步（全站截圖驗證）
 - [x] T9.2 圖表配色對齊主題 | 依賴: T9.1 | 狀態: done
       驗收: 月報 doughnut/bar 改用與品牌協調的調色盤，選中月份 emerald 強調（截圖驗證）
-- [ ] T9.3 元件微一致化（按鈕尺寸階層、label-text、input-error、badge 語意）| 依賴: T9.1 | 狀態: todo
-      驗收: 抽查表單驗證顯示 input-error；按鈕尺寸一致
+- [x] T9.3 元件微一致化 | 依賴: T9.1 | 狀態: done
+      驗收: 分類編輯名稱空白顯示 input-error 紅框且阻擋儲存（取代靜默 no-op）；圖標/顏色標籤改 label-text 一致；按鈕尺寸階層與 badge 語意抽查確認已一致（無需改）
 
 ## M10 — UED 改善 Phase 3（互動優化）
 
