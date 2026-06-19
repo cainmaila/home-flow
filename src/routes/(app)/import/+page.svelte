@@ -9,7 +9,6 @@
 	let committing: boolean = $state(false);
 	let errorMessage: string = $state('');
 
-	// Upload result (parsed records from CSV)
 	let uploadResult: {
 		ok: boolean;
 		recordCount: number;
@@ -17,7 +16,6 @@
 		errors: { severity: string; message: string }[];
 	} | null = $state(null);
 
-	// Preview result
 	let previewResult: {
 		importId: string;
 		records: {
@@ -29,7 +27,6 @@
 		summary: { parsed: number; newRecords: number; duplicates: number; updates: number };
 	} | null = $state(null);
 
-	// Commit result
 	let commitResult: {
 		importId: string;
 		inserted: number;
@@ -85,7 +82,6 @@
 				return;
 			}
 
-			// Automatically run preview
 			await runPreview();
 		} catch {
 			errorMessage = '網路錯誤，請再試一次';
@@ -175,248 +171,150 @@
 	}
 </script>
 
-<div class="import-page">
-	<h1>匯入 CSV</h1>
+<div class="space-y-6">
+	<h1 class="text-2xl font-bold">匯入 CSV</h1>
 
 	{#if status === 'committed' && commitResult}
-		<div class="commit-result">
-			<h2>匯入完成</h2>
-			<table class="summary-table">
-				<tbody>
-					<tr><td>新增</td><td>{commitResult.inserted} 筆</td></tr>
-					<tr><td>重複略過</td><td>{commitResult.duplicates} 筆</td></tr>
-					<tr><td>更新</td><td>{commitResult.updated} 筆</td></tr>
-					<tr><td>略過</td><td>{commitResult.skipped} 筆</td></tr>
-				</tbody>
-			</table>
-			<div class="actions">
-				<button onclick={reset}>匯入其他檔案</button>
-				<a href="/import/history">查看匯入歷程</a>
-			</div>
-		</div>
-	{:else if status === 'previewed' && previewResult}
-		<div class="preview-result">
-			<h2>預覽結果</h2>
-			<table class="summary-table">
-				<tbody>
-					<tr><td>解析筆數</td><td>{previewResult.summary.parsed}</td></tr>
-					<tr><td>新增</td><td>{previewResult.summary.newRecords}</td></tr>
-					<tr><td>重複</td><td>{previewResult.summary.duplicates}</td></tr>
-					<tr><td>更新候選</td><td>{previewResult.summary.updates}</td></tr>
-				</tbody>
-			</table>
-
-			{#if previewResult.records.some((r) => r.status === 'update')}
-				<h3>更新候選</h3>
-				<div class="table-scroll">
-					<table>
-						<thead>
-							<tr>
-								<th>日期</th>
-								<th>分類</th>
-								<th>舊金額</th>
-								<th>新金額</th>
-								<th>處理方式</th>
-							</tr>
-						</thead>
+		<div class="card bg-base-100 shadow">
+			<div class="card-body">
+				<h2 class="card-title text-lg">匯入完成</h2>
+				<div class="overflow-x-auto">
+					<table class="table table-sm w-auto">
 						<tbody>
-							{#each previewResult.records as pr, i}
-								{#if pr.status === 'update'}
-									<tr>
-										<td>{pr.record.expense_date}</td>
-										<td>{pr.record.raw_category}</td>
-										<td>{pr.existingAmount}</td>
-										<td>{pr.record.amount}</td>
-										<td>
-											<select
-												value={pr.resolution ?? 'use_new'}
-												onchange={(e) => setResolution(i, (e.target as HTMLSelectElement).value as 'use_new' | 'keep_old' | 'skip')}
-											>
-												<option value="use_new">使用新值</option>
-												<option value="keep_old">保留舊值</option>
-												<option value="skip">略過</option>
-											</select>
-										</td>
-									</tr>
-								{/if}
-							{/each}
+							<tr><td>新增</td><td class="font-semibold">{commitResult.inserted} 筆</td></tr>
+							<tr><td>重複略過</td><td class="font-semibold">{commitResult.duplicates} 筆</td></tr>
+							<tr><td>更新</td><td class="font-semibold">{commitResult.updated} 筆</td></tr>
+							<tr><td>略過</td><td class="font-semibold">{commitResult.skipped} 筆</td></tr>
 						</tbody>
 					</table>
 				</div>
-			{/if}
-
-			{#if previewResult.records.some((r) => r.status === 'new')}
-				<h3>新增記錄（前 20 筆）</h3>
-				<table>
-					<thead>
-						<tr><th>日期</th><th>分類</th><th>金額</th></tr>
-					</thead>
+				<div class="card-actions mt-4">
+					<button class="btn btn-primary btn-sm" onclick={reset}>匯入其他檔案</button>
+					<a href="/import/history" class="btn btn-ghost btn-sm">查看匯入歷程</a>
+				</div>
+			</div>
+		</div>
+	{:else if status === 'previewed' && previewResult}
+		<div class="card bg-base-100 shadow">
+			<div class="card-body">
+				<h2 class="card-title text-lg">預覽結果</h2>
+				<table class="table table-sm w-auto">
 					<tbody>
-						{#each previewResult.records.filter((r) => r.status === 'new').slice(0, 20) as pr}
-							<tr>
-								<td>{pr.record.expense_date}</td>
-								<td>{pr.record.raw_category}</td>
-								<td>{pr.record.amount}</td>
-							</tr>
-						{/each}
+						<tr><td>解析筆數</td><td class="font-semibold">{previewResult.summary.parsed}</td></tr>
+						<tr><td>新增</td><td class="font-semibold">{previewResult.summary.newRecords}</td></tr>
+						<tr><td>重複</td><td class="font-semibold">{previewResult.summary.duplicates}</td></tr>
+						<tr><td>更新候選</td><td class="font-semibold">{previewResult.summary.updates}</td></tr>
 					</tbody>
 				</table>
-			{/if}
 
-			<div class="actions">
-				<button onclick={handleCommit} disabled={committing}>
-					確認匯入
-				</button>
-				<button onclick={reset} class="secondary">取消</button>
+				{#if previewResult.records.some((r) => r.status === 'update')}
+					<h3 class="font-semibold mt-4">更新候選</h3>
+					<div class="overflow-x-auto">
+						<table class="table table-sm">
+							<thead>
+								<tr>
+									<th>日期</th>
+									<th>分類</th>
+									<th class="text-right">舊金額</th>
+									<th class="text-right">新金額</th>
+									<th>處理方式</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each previewResult.records as pr, i}
+									{#if pr.status === 'update'}
+										<tr>
+											<td>{pr.record.expense_date}</td>
+											<td>{pr.record.raw_category}</td>
+											<td class="text-right tabular-nums">{pr.existingAmount}</td>
+											<td class="text-right tabular-nums">{pr.record.amount}</td>
+											<td>
+												<select
+													class="select select-bordered select-xs"
+													value={pr.resolution ?? 'use_new'}
+													onchange={(e) => setResolution(i, (e.target as HTMLSelectElement).value as 'use_new' | 'keep_old' | 'skip')}
+												>
+													<option value="use_new">使用新值</option>
+													<option value="keep_old">保留舊值</option>
+													<option value="skip">略過</option>
+												</select>
+											</td>
+										</tr>
+									{/if}
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				{/if}
+
+				{#if previewResult.records.some((r) => r.status === 'new')}
+					<h3 class="font-semibold mt-4">新增記錄（前 20 筆）</h3>
+					<div class="overflow-x-auto">
+						<table class="table table-sm">
+							<thead>
+								<tr><th>日期</th><th>分類</th><th class="text-right">金額</th></tr>
+							</thead>
+							<tbody>
+								{#each previewResult.records.filter((r) => r.status === 'new').slice(0, 20) as pr}
+									<tr>
+										<td>{pr.record.expense_date}</td>
+										<td>{pr.record.raw_category}</td>
+										<td class="text-right tabular-nums">{pr.record.amount}</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				{/if}
+
+				<div class="card-actions mt-4">
+					<button class="btn btn-primary btn-sm" onclick={handleCommit} disabled={committing}>
+						確認匯入
+					</button>
+					<button class="btn btn-ghost btn-sm" onclick={reset}>取消</button>
+				</div>
 			</div>
 		</div>
 	{:else}
-		<div class="form-group">
-			<label for="csv-file">選擇 CSV 檔案</label>
-			<input id="csv-file" type="file" accept=".csv" bind:this={fileInput} />
-		</div>
+		<div class="card bg-base-100 shadow">
+			<div class="card-body">
+				<label class="form-control w-full max-w-xs">
+					<div class="label"><span class="label-text font-semibold">選擇 CSV 檔案</span></div>
+					<input id="csv-file" type="file" accept=".csv" class="file-input file-input-bordered file-input-sm w-full" bind:this={fileInput} />
+				</label>
 
-		<div class="form-group">
-			<label for="year">年份</label>
-			<input id="year" type="number" min="2000" max="2100" bind:value={year} />
-		</div>
+				<label class="form-control w-auto">
+					<div class="label"><span class="label-text font-semibold">年份</span></div>
+					<input id="year" type="number" min="2000" max="2100" class="input input-bordered input-sm w-24" bind:value={year} />
+				</label>
 
-		<button onclick={handleUpload} disabled={status === 'uploading' || status === 'previewing'}>
-			{#if status === 'uploading'}
-				上傳中...
-			{:else if status === 'previewing'}
-				分析中...
-			{:else}
-				上傳並預覽
-			{/if}
-		</button>
+				<div class="mt-4">
+					<button class="btn btn-primary btn-sm" onclick={handleUpload} disabled={status === 'uploading' || status === 'previewing'}>
+						{#if status === 'uploading'}
+							<span class="loading loading-spinner loading-xs"></span> 上傳中...
+						{:else if status === 'previewing'}
+							<span class="loading loading-spinner loading-xs"></span> 分析中...
+						{:else}
+							上傳並預覽
+						{/if}
+					</button>
+				</div>
 
-		{#if status === 'error'}
-			<p class="error">{errorMessage}</p>
-		{/if}
+				{#if status === 'error'}
+					<div class="alert alert-error text-sm mt-4">{errorMessage}</div>
+				{/if}
 
-		{#if uploadResult?.errors?.length}
-			<div class="warnings">
-				<h3>訊息</h3>
-				<ul>
-					{#each uploadResult.errors as err}
-						<li class="severity-{err.severity}">{err.severity}: {err.message}</li>
-					{/each}
-				</ul>
+				{#if uploadResult?.errors?.length}
+					<div class="mt-4 space-y-1">
+						<h3 class="font-semibold text-sm">訊息</h3>
+						{#each uploadResult.errors as err}
+							<p class="text-sm {err.severity === 'blocking' ? 'text-error' : err.severity === 'warning' ? 'text-warning' : 'text-base-content/60'}">
+								{err.severity}: {err.message}
+							</p>
+						{/each}
+					</div>
+				{/if}
 			</div>
-		{/if}
+		</div>
 	{/if}
-
 </div>
-
-<style>
-	.import-page {
-		max-width: 700px;
-		margin: 0 auto;
-		font-family: system-ui, sans-serif;
-	}
-
-	.form-group {
-		margin-bottom: 1rem;
-	}
-
-	label {
-		display: block;
-		margin-bottom: 0.25rem;
-		font-weight: 600;
-	}
-
-	input[type='number'] {
-		width: 6rem;
-		padding: 0.3rem 0.5rem;
-	}
-
-	button {
-		padding: 0.5rem 1.5rem;
-		cursor: pointer;
-	}
-
-	button:disabled {
-		opacity: 0.6;
-		cursor: not-allowed;
-	}
-
-	button.secondary {
-		background: #eee;
-		border: 1px solid #ccc;
-		margin-left: 0.5rem;
-	}
-
-	.error {
-		color: #c00;
-		margin-top: 1rem;
-	}
-
-	.warnings {
-		margin-top: 1rem;
-	}
-
-	.warnings ul {
-		list-style: none;
-		padding: 0;
-	}
-
-	.severity-blocking {
-		color: #c00;
-	}
-
-	.severity-warning {
-		color: #b86e00;
-	}
-
-	.severity-info {
-		color: #666;
-	}
-
-	.summary-table {
-		margin: 0.5rem 0 1rem;
-		border-collapse: collapse;
-	}
-
-	.summary-table td {
-		padding: 0.25rem 1rem 0.25rem 0;
-	}
-
-	.summary-table td:last-child {
-		font-weight: 600;
-	}
-
-	.table-scroll {
-		overflow-x: auto;
-	}
-
-	table {
-		width: 100%;
-		border-collapse: collapse;
-		margin-top: 0.5rem;
-	}
-
-	th,
-	td {
-		border: 1px solid #ddd;
-		padding: 0.3rem 0.5rem;
-		text-align: left;
-		white-space: nowrap;
-	}
-
-	th {
-		background: #f5f5f5;
-	}
-
-	select {
-		padding: 0.2rem;
-	}
-
-	.actions {
-		margin-top: 1.5rem;
-	}
-
-	.commit-result {
-		margin-top: 1rem;
-	}
-</style>

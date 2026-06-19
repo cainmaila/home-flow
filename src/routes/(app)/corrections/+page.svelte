@@ -3,7 +3,6 @@
 
 	const HOUSEHOLD_ID = 'default';
 
-	// Pending (unresolved) categories
 	let pending: { raw_category: string; count: number }[] = $state([]);
 	let aliases: {
 		id: string;
@@ -17,7 +16,6 @@
 	let errorMessage = $state('');
 	let successMessage = $state('');
 
-	// New alias form
 	let newAliasRaw = $state('');
 	let newAliasNormalized = $state('');
 
@@ -86,208 +84,119 @@
 	}
 </script>
 
-<div class="corrections-page">
-	<h1>分類校正</h1>
+<div class="space-y-6">
+	<h1 class="text-2xl font-bold">分類校正</h1>
 
 	{#if loading}
-		<p>載入中...</p>
+		<div class="flex justify-center py-12">
+			<span class="loading loading-spinner loading-lg"></span>
+		</div>
 	{:else if errorMessage}
-		<p class="error">{errorMessage}</p>
+		<div class="alert alert-error">{errorMessage}</div>
 	{:else}
 		{#if successMessage}
-			<p class="success">{successMessage}</p>
+			<div class="alert alert-success text-sm">{successMessage}</div>
 		{/if}
 
-		<!-- Pending categories section -->
-		<section>
-			<h2>待確認分類 ({pending.length})</h2>
-			{#if pending.length === 0}
-				<p>所有分類皆已映射。</p>
-			{:else}
-				<div class="table-scroll">
-					<table>
-						<thead>
-							<tr>
-								<th>原始分類</th>
-								<th>筆數</th>
-								<th>操作</th>
-							</tr>
-						</thead>
-						<tbody>
-							{#each pending as item}
+		<!-- Pending categories -->
+		<div class="card bg-base-100 shadow">
+			<div class="card-body">
+				<h2 class="card-title text-lg">待確認分類 ({pending.length})</h2>
+				{#if pending.length === 0}
+					<p class="text-base-content/50">所有分類皆已映射。</p>
+				{:else}
+					<div class="overflow-x-auto">
+						<table class="table table-sm">
+							<thead>
 								<tr>
-									<td>{item.raw_category}</td>
-									<td>{item.count}</td>
-									<td>
-										<button onclick={() => handlePendingMap(item.raw_category)}>
-											建立映射
-										</button>
-									</td>
+									<th>原始分類</th>
+									<th class="text-right">筆數</th>
+									<th>操作</th>
 								</tr>
-							{/each}
-						</tbody>
-					</table>
-				</div>
-			{/if}
-		</section>
+							</thead>
+							<tbody>
+								{#each pending as item}
+									<tr class="hover">
+										<td>{item.raw_category}</td>
+										<td class="text-right tabular-nums">{item.count}</td>
+										<td>
+											<button class="btn btn-primary btn-xs" onclick={() => handlePendingMap(item.raw_category)}>
+												建立映射
+											</button>
+										</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				{/if}
+			</div>
+		</div>
 
 		<!-- New alias form -->
-		<section class="alias-form">
-			<h2>新增分類映射</h2>
-			<div class="form-row">
-				<label>
-					原始分類
-					<input type="text" bind:value={newAliasRaw} placeholder="例: 消夜/零食" />
-				</label>
-				<label>
-					標準分類
-					<select bind:value={newAliasNormalized}>
-						<option value="">-- 選擇 --</option>
-						{#each STANDARD_CATEGORIES as cat}
-							<option value={cat}>{cat}</option>
-						{/each}
-					</select>
-				</label>
-				<button
-					onclick={() => createAlias(newAliasRaw, newAliasNormalized)}
-					disabled={!newAliasRaw || !newAliasNormalized}
-				>
-					確認
-				</button>
-			</div>
-		</section>
-
-		<!-- Existing aliases section -->
-		<section>
-			<h2>現有映射 ({aliases.length})</h2>
-			{#if aliases.length === 0}
-				<p>尚無映射規則。</p>
-			{:else}
-				<div class="table-scroll">
-					<table>
-						<thead>
-							<tr>
-								<th>原始分類</th>
-								<th>標準分類</th>
-								<th>來源</th>
-								<th>建立時間</th>
-							</tr>
-						</thead>
-						<tbody>
-							{#each aliases as alias}
-								<tr>
-									<td>{alias.raw_category}</td>
-									<td>{alias.normalized_category}</td>
-									<td>{alias.source === 'manual' ? '人工' : 'AI 自動'}</td>
-									<td>{alias.created_at}</td>
-								</tr>
+		<div class="card bg-base-100 shadow">
+			<div class="card-body">
+				<h2 class="card-title text-lg">新增分類映射</h2>
+				<div class="flex flex-wrap gap-4 items-end">
+					<label class="form-control w-full max-w-xs">
+						<div class="label"><span class="label-text font-semibold">原始分類</span></div>
+						<input type="text" class="input input-bordered input-sm" bind:value={newAliasRaw} placeholder="例: 消夜/零食" />
+					</label>
+					<label class="form-control w-full max-w-xs">
+						<div class="label"><span class="label-text font-semibold">標準分類</span></div>
+						<select class="select select-bordered select-sm" bind:value={newAliasNormalized}>
+							<option value="">-- 選擇 --</option>
+							{#each STANDARD_CATEGORIES as cat}
+								<option value={cat}>{cat}</option>
 							{/each}
-						</tbody>
-					</table>
+						</select>
+					</label>
+					<button
+						class="btn btn-primary btn-sm"
+						onclick={() => createAlias(newAliasRaw, newAliasNormalized)}
+						disabled={!newAliasRaw || !newAliasNormalized}
+					>
+						確認
+					</button>
 				</div>
-			{/if}
-		</section>
+			</div>
+		</div>
+
+		<!-- Existing aliases -->
+		<div class="card bg-base-100 shadow">
+			<div class="card-body">
+				<h2 class="card-title text-lg">現有映射 ({aliases.length})</h2>
+				{#if aliases.length === 0}
+					<p class="text-base-content/50">尚無映射規則。</p>
+				{:else}
+					<div class="overflow-x-auto">
+						<table class="table table-sm">
+							<thead>
+								<tr>
+									<th>原始分類</th>
+									<th>標準分類</th>
+									<th>來源</th>
+									<th>建立時間</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each aliases as alias}
+									<tr class="hover">
+										<td>{alias.raw_category}</td>
+										<td>{alias.normalized_category}</td>
+										<td>
+											<span class="badge badge-sm {alias.source === 'manual' ? 'badge-primary' : 'badge-ghost'}">
+												{alias.source === 'manual' ? '人工' : 'AI 自動'}
+											</span>
+										</td>
+										<td class="whitespace-nowrap">{alias.created_at}</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				{/if}
+			</div>
+		</div>
 	{/if}
-
 </div>
-
-<style>
-	.corrections-page {
-		max-width: 800px;
-		margin: 0 auto;
-		font-family: system-ui, sans-serif;
-	}
-
-	section {
-		margin-bottom: 2rem;
-	}
-
-	.error {
-		color: #c00;
-	}
-
-	.success {
-		color: #080;
-		background: #e8f5e9;
-		padding: 0.5rem 1rem;
-		border-radius: 4px;
-	}
-
-	.table-scroll {
-		overflow-x: auto;
-	}
-
-	table {
-		width: 100%;
-		border-collapse: collapse;
-		margin-top: 0.5rem;
-	}
-
-	th,
-	td {
-		border: 1px solid #ddd;
-		padding: 0.4rem 0.6rem;
-		text-align: left;
-		white-space: nowrap;
-	}
-
-	th {
-		background: #f5f5f5;
-		font-size: 0.85rem;
-	}
-
-	.alias-form {
-		background: #f9f9f9;
-		padding: 1rem;
-		border-radius: 6px;
-	}
-
-	.form-row {
-		display: flex;
-		gap: 1rem;
-		align-items: flex-end;
-		flex-wrap: wrap;
-	}
-
-	.form-row label {
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-		font-weight: 600;
-		font-size: 0.9rem;
-		min-width: 0;
-	}
-
-	.form-row input,
-	.form-row select {
-		padding: 0.3rem 0.5rem;
-		font-size: 0.9rem;
-		max-width: 100%;
-	}
-
-	button {
-		padding: 0.4rem 1rem;
-		cursor: pointer;
-	}
-
-	button:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
-	@media (max-width: 640px) {
-		.form-row {
-			flex-direction: column;
-			align-items: stretch;
-		}
-
-		.form-row label {
-			width: 100%;
-		}
-
-		.form-row input,
-		.form-row select {
-			width: 100%;
-		}
-	}
-</style>

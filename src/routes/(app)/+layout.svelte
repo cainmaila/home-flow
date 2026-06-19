@@ -1,112 +1,42 @@
 <script lang="ts">
 	let { children } = $props();
-	let menuOpen = $state(false);
-
-	function toggleMenu() {
-		menuOpen = !menuOpen;
-	}
-
-	function closeMenu() {
-		menuOpen = false;
-	}
 </script>
 
-<div class="app-shell">
-	<nav class="app-nav">
-		<a href="/reports" class="nav-brand">Home Flow</a>
-		<button class="menu-toggle" onclick={toggleMenu} aria-label="選單">
-			{menuOpen ? '✕' : '☰'}
-		</button>
-		<div class="nav-links" class:open={menuOpen}>
-			<a href="/reports" onclick={closeMenu}>月報</a>
-			<a href="/reports/details" onclick={closeMenu}>明細</a>
-			<a href="/import" onclick={closeMenu}>匯入</a>
-			<a href="/corrections" onclick={closeMenu}>校正</a>
-			<a href="/import/history" onclick={closeMenu}>歷程</a>
+<div class="min-h-screen bg-base-200">
+	<div class="navbar bg-neutral text-neutral-content shadow-lg">
+		<div class="navbar-start">
+			<div class="dropdown">
+				<div tabindex="0" role="button" class="btn btn-ghost lg:hidden">
+					<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16" />
+					</svg>
+				</div>
+				<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+				<ul tabindex="0" class="menu menu-sm dropdown-content bg-neutral rounded-box z-10 mt-3 w-52 p-2 shadow">
+					<li><a href="/reports">月報</a></li>
+					<li><a href="/reports/details">明細</a></li>
+					<li><a href="/import">匯入</a></li>
+					<li><a href="/corrections">校正</a></li>
+					<li><a href="/import/history">歷程</a></li>
+				</ul>
+			</div>
+			<a href="/reports" class="btn btn-ghost text-xl">Home Flow</a>
 		</div>
-	</nav>
+		<div class="navbar-center hidden lg:flex">
+			<ul class="menu menu-horizontal px-1">
+				<li><a href="/reports">月報</a></li>
+				<li><a href="/reports/details">明細</a></li>
+				<li><a href="/import">匯入</a></li>
+				<li><a href="/corrections">校正</a></li>
+				<li><a href="/import/history">歷程</a></li>
+			</ul>
+		</div>
+		<div class="navbar-end">
+			<a href="/auth/logout" class="btn btn-ghost btn-sm">登出</a>
+		</div>
+	</div>
 
-	<main class="app-main">
+	<main class="max-w-5xl mx-auto p-4 md:p-6">
 		{@render children()}
 	</main>
 </div>
-
-<style>
-	.app-shell {
-		min-height: 100dvh;
-		font-family: system-ui, sans-serif;
-	}
-
-	.app-nav {
-		display: flex;
-		align-items: center;
-		gap: 1rem;
-		padding: 0.5rem 1rem;
-		background: #1a1a2e;
-		color: #fff;
-		flex-wrap: wrap;
-	}
-
-	.nav-brand {
-		font-weight: 700;
-		font-size: 1.1rem;
-		color: #fff;
-		text-decoration: none;
-		margin-right: auto;
-	}
-
-	.menu-toggle {
-		display: none;
-		background: none;
-		border: none;
-		color: #fff;
-		font-size: 1.4rem;
-		cursor: pointer;
-		padding: 0.2rem 0.4rem;
-	}
-
-	.nav-links {
-		display: flex;
-		gap: 0.25rem;
-	}
-
-	.nav-links a {
-		color: #ccd;
-		text-decoration: none;
-		padding: 0.4rem 0.7rem;
-		border-radius: 4px;
-		font-size: 0.9rem;
-	}
-
-	.nav-links a:hover {
-		background: rgba(255,255,255,0.1);
-		color: #fff;
-	}
-
-	.app-main {
-		padding: 1rem;
-	}
-
-	@media (max-width: 640px) {
-		.menu-toggle {
-			display: block;
-		}
-
-		.nav-links {
-			display: none;
-			width: 100%;
-			flex-direction: column;
-			gap: 0;
-		}
-
-		.nav-links.open {
-			display: flex;
-		}
-
-		.nav-links a {
-			padding: 0.6rem 0.7rem;
-			border-radius: 0;
-			border-top: 1px solid rgba(255,255,255,0.1);
-		}
-	}
-</style>

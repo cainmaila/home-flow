@@ -53,91 +53,64 @@
 	};
 </script>
 
-<div class="history-page">
-	<h1>匯入歷程</h1>
-
-	<p class="nav-link"><a href="/import">返回匯入</a></p>
+<div class="space-y-6">
+	<div class="flex items-center justify-between flex-wrap gap-4">
+		<h1 class="text-2xl font-bold">匯入歷程</h1>
+		<a href="/import" class="btn btn-ghost btn-sm">返回匯入</a>
+	</div>
 
 	{#if loading}
-		<p>載入中...</p>
+		<div class="flex justify-center py-12">
+			<span class="loading loading-spinner loading-lg"></span>
+		</div>
 	{:else if errorMessage}
-		<p class="error">{errorMessage}</p>
+		<div class="alert alert-error">{errorMessage}</div>
 	{:else if imports.length === 0}
-		<p>尚無匯入記錄。</p>
+		<div class="card bg-base-100 shadow">
+			<div class="card-body text-center">
+				<p class="text-base-content/50">尚無匯入記錄。</p>
+			</div>
+		</div>
 	{:else}
-		<table>
-			<thead>
-				<tr>
-					<th>時間</th>
-					<th>匯入者</th>
-					<th>檔案</th>
-					<th>狀態</th>
-					<th>解析</th>
-					<th>新增</th>
-					<th>重複</th>
-					<th>更新</th>
-					<th>略過</th>
-				</tr>
-			</thead>
-			<tbody>
-				{#each imports as imp}
-					<tr>
-						<td>{formatTime(imp.committed_at ?? imp.created_at)}</td>
-						<td>{imp.uploaded_by_name ?? imp.uploaded_by_email ?? '-'}</td>
-						<td>{imp.filename}</td>
-						<td>{statusLabels[imp.status] ?? imp.status}</td>
-						<td>{imp.parsed_rows}</td>
-						<td>{imp.inserted_rows}</td>
-						<td>{imp.duplicate_rows}</td>
-						<td>{imp.updated_rows}</td>
-						<td>{imp.skipped_rows}</td>
-					</tr>
-				{/each}
-			</tbody>
-		</table>
+		<div class="card bg-base-100 shadow">
+			<div class="card-body p-0">
+				<div class="overflow-x-auto">
+					<table class="table table-sm">
+						<thead>
+							<tr>
+								<th>時間</th>
+								<th>匯入者</th>
+								<th>檔案</th>
+								<th>狀態</th>
+								<th class="text-right">解析</th>
+								<th class="text-right">新增</th>
+								<th class="text-right">重複</th>
+								<th class="text-right">更新</th>
+								<th class="text-right">略過</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each imports as imp}
+								<tr class="hover">
+									<td class="whitespace-nowrap">{formatTime(imp.committed_at ?? imp.created_at)}</td>
+									<td>{imp.uploaded_by_name ?? imp.uploaded_by_email ?? '-'}</td>
+									<td>{imp.filename}</td>
+									<td>
+										<span class="badge badge-sm {imp.status === 'committed' ? 'badge-success' : imp.status === 'failed' ? 'badge-error' : 'badge-ghost'}">
+											{statusLabels[imp.status] ?? imp.status}
+										</span>
+									</td>
+									<td class="text-right tabular-nums">{imp.parsed_rows}</td>
+									<td class="text-right tabular-nums">{imp.inserted_rows}</td>
+									<td class="text-right tabular-nums">{imp.duplicate_rows}</td>
+									<td class="text-right tabular-nums">{imp.updated_rows}</td>
+									<td class="text-right tabular-nums">{imp.skipped_rows}</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
 	{/if}
 </div>
-
-<style>
-	.history-page {
-		max-width: 900px;
-		margin: 40px auto;
-		padding: 0 1rem;
-		font-family: system-ui, sans-serif;
-	}
-
-	.error {
-		color: #c00;
-	}
-
-	.nav-link {
-		font-size: 0.9rem;
-		margin-bottom: 1rem;
-	}
-
-	.nav-link a {
-		color: #0066cc;
-	}
-
-	table {
-		width: 100%;
-		border-collapse: collapse;
-	}
-
-	th,
-	td {
-		border: 1px solid #ddd;
-		padding: 0.4rem 0.6rem;
-		text-align: left;
-		white-space: nowrap;
-	}
-
-	th {
-		background: #f5f5f5;
-		font-size: 0.85rem;
-	}
-
-	td {
-		font-size: 0.85rem;
-	}
-</style>

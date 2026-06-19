@@ -93,7 +93,6 @@
 		}
 	}
 
-	// T4.5: Load filtered expenses by category
 	async function loadFilteredExpenses(category: string) {
 		filterLoading = true;
 		const params = new URLSearchParams();
@@ -145,7 +144,6 @@
 		}
 	}
 
-	// T4.5: Handle bar chart click to switch month
 	async function handleBarClick(_event: ChartEvent, elements: ActiveElement[]) {
 		if (elements.length === 0) return;
 		const index = elements[0].index;
@@ -164,7 +162,7 @@
 
 		const bgColors = COLORS.slice(0, categoryBreakdown.length).map((color, i) => {
 			if (selectedCategory && categoryBreakdown[i].category !== selectedCategory) {
-				return color + '40'; // Dim unselected segments
+				return color + '40';
 			}
 			return color;
 		});
@@ -258,304 +256,161 @@
 	});
 </script>
 
-<div class="reports-page">
-	<h1>月報表</h1>
+<div class="space-y-6">
+	<div class="flex items-center justify-between flex-wrap gap-4">
+		<h1 class="text-2xl font-bold">月報表</h1>
 
-	{#if loading}
-		<p>載入中...</p>
-	{:else if errorMessage}
-		<p class="error">{errorMessage}</p>
-	{:else if availableMonths.length === 0}
-		<p>尚無支出資料。請先<a href="/import">匯入 CSV</a>。</p>
-	{:else}
-		<!-- Month selector -->
-		<div class="month-selector">
-			<label for="month-select">月份</label>
-			<select id="month-select" value={selectedMonth} onchange={handleMonthChange}>
+		{#if !loading && availableMonths.length > 0}
+			<select class="select select-bordered select-sm" value={selectedMonth} onchange={handleMonthChange}>
 				{#each availableMonths as m}
 					<option value={m}>{m}</option>
 				{/each}
 			</select>
+		{/if}
+	</div>
+
+	{#if loading}
+		<div class="flex justify-center py-12">
+			<span class="loading loading-spinner loading-lg"></span>
 		</div>
-
-		<!-- Total expense -->
-		<div class="total-card">
-			<span class="total-label">{selectedMonth} 總支出</span>
-			<span class="total-amount">{formatAmount(totalExpense)}</span>
+	{:else if errorMessage}
+		<div class="alert alert-error">{errorMessage}</div>
+	{:else if availableMonths.length === 0}
+		<div class="card bg-base-100 shadow">
+			<div class="card-body text-center">
+				<p>尚無支出資料。請先<a href="/import" class="link link-primary">匯入 CSV</a>。</p>
+			</div>
 		</div>
-
-		<!-- Month comparison (T4.3) -->
-		{#if comparison && selectedMonth === comparison.currentMonth}
-			<div class="comparison-card">
-				vs 上月
-				<span class={comparison.diff >= 0 ? 'diff-up' : 'diff-down'}>
-					{comparison.diff >= 0 ? '+' : ''}{formatAmount(comparison.diff)}
-					({comparison.diff >= 0 ? '+' : ''}{comparison.diffPercent}%)
-				</span>
-			</div>
-		{/if}
-
-		<!-- Active filter chip (T4.5) -->
-		{#if selectedCategory}
-			<div class="filter-chip">
-				<span>正在篩選: {selectedCategory}</span>
-				<button class="chip-clear" onclick={clearCategoryFilter}>&times;</button>
-			</div>
-		{/if}
-
-		<!-- Category ranking table (T4.2) -->
-		<section>
-			<h2>分類排行</h2>
-			{#if categoryBreakdown.length > 0}
-				<table>
-					<thead>
-						<tr>
-							<th>#</th>
-							<th>分類</th>
-							<th>金額</th>
-							<th>占比</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each categoryBreakdown as cat, i}
-							<tr class:selected-row={selectedCategory === cat.category}>
-								<td>{i + 1}</td>
-								<td>
-									<button class="category-btn" onclick={() => selectCategory(cat.category)}>
-										{cat.category}
-									</button>
-								</td>
-								<td class="amount">{formatAmount(cat.total)}</td>
-								<td>{cat.percentage}%</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			{:else}
-				<p>此月份無資料。</p>
-			{/if}
-		</section>
-
-		<!-- Doughnut chart (T4.2) -->
-		{#if categoryBreakdown.length > 0}
-			<section>
-				<h2>分類占比</h2>
-				<div class="chart-container">
-					<canvas bind:this={doughnutCanvas}></canvas>
-				</div>
-			</section>
-		{/if}
-
-		<!-- Bar chart - monthly trend (T4.3) -->
-		{#if trendMonths.length > 0}
-			<section>
-				<h2>月趨勢</h2>
-				<div class="chart-container">
-					<canvas bind:this={barCanvas}></canvas>
-				</div>
-			</section>
-		{/if}
-
-		<!-- T4.5: Inline filtered detail table -->
-		{#if selectedCategory}
-			<section>
-				<h2>{selectedCategory} 明細</h2>
-				{#if filterLoading}
-					<p>載入中...</p>
-				{:else if filteredExpenses.length > 0}
-					<div class="summary">
-						共 {filteredCount} 筆，合計 <strong>{formatAmount(filteredTotal)}</strong>
+	{:else}
+		<!-- Stat card — signature element -->
+		<div class="stats shadow bg-base-100 w-full">
+			<div class="stat">
+				<div class="stat-title">{selectedMonth} 總支出</div>
+				<div class="stat-value text-primary tabular-nums">{formatAmount(totalExpense)}</div>
+				{#if comparison && selectedMonth === comparison.currentMonth}
+					<div class="stat-desc text-base">
+						vs 上月
+						<span class={comparison.diff >= 0 ? 'text-error font-semibold' : 'text-success font-semibold'}>
+							{comparison.diff >= 0 ? '+' : ''}{formatAmount(comparison.diff)}
+							({comparison.diff >= 0 ? '+' : ''}{comparison.diffPercent}%)
+						</span>
 					</div>
-					<div class="table-scroll">
-						<table>
+				{/if}
+			</div>
+		</div>
+
+		<!-- Filter chip -->
+		{#if selectedCategory}
+			<div class="flex items-center gap-2">
+				<div class="badge badge-primary badge-lg gap-2">
+					篩選: {selectedCategory}
+					<button class="cursor-pointer" onclick={clearCategoryFilter}>&times;</button>
+				</div>
+			</div>
+		{/if}
+
+		<!-- Charts -->
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+			{#if categoryBreakdown.length > 0}
+				<div class="card bg-base-100 shadow">
+					<div class="card-body">
+						<h2 class="card-title text-lg">分類占比</h2>
+						<div class="max-w-xs mx-auto">
+							<canvas bind:this={doughnutCanvas}></canvas>
+						</div>
+					</div>
+				</div>
+			{/if}
+
+			{#if trendMonths.length > 0}
+				<div class="card bg-base-100 shadow">
+					<div class="card-body">
+						<h2 class="card-title text-lg">月趨勢</h2>
+						<canvas bind:this={barCanvas}></canvas>
+					</div>
+				</div>
+			{/if}
+		</div>
+
+		<!-- Category ranking -->
+		{#if categoryBreakdown.length > 0}
+			<div class="card bg-base-100 shadow">
+				<div class="card-body">
+					<h2 class="card-title text-lg">分類排行</h2>
+					<div class="overflow-x-auto">
+						<table class="table table-sm">
 							<thead>
 								<tr>
-									<th>日期</th>
+									<th>#</th>
 									<th>分類</th>
-									<th>金額</th>
-									<th>固定</th>
+									<th class="text-right">金額</th>
+									<th class="text-right">占比</th>
 								</tr>
 							</thead>
 							<tbody>
-								{#each filteredExpenses as exp}
-									<tr>
-										<td>{exp.expense_date}</td>
-										<td>{exp.normalized_category}</td>
-										<td class="amount">{formatAmount(exp.amount)}</td>
-										<td>{exp.is_fixed_expense ? '是' : ''}</td>
+								{#each categoryBreakdown as cat, i}
+									<tr class={selectedCategory === cat.category ? 'bg-primary/10' : 'hover'}>
+										<td>{i + 1}</td>
+										<td>
+											<button class="link link-primary" onclick={() => selectCategory(cat.category)}>
+												{cat.category}
+											</button>
+										</td>
+										<td class="text-right tabular-nums">{formatAmount(cat.total)}</td>
+										<td class="text-right">{cat.percentage}%</td>
 									</tr>
 								{/each}
 							</tbody>
 						</table>
 					</div>
-				{:else}
-					<p>無符合條件的資料。</p>
-				{/if}
-			</section>
+				</div>
+			</div>
 		{/if}
 
-		<p class="nav-link">
-			<a href="/reports/details?month={selectedMonth}">查看完整明細</a>
-		</p>
+		<!-- Filtered detail -->
+		{#if selectedCategory}
+			<div class="card bg-base-100 shadow">
+				<div class="card-body">
+					<h2 class="card-title text-lg">{selectedCategory} 明細</h2>
+					{#if filterLoading}
+						<div class="flex justify-center py-4">
+							<span class="loading loading-spinner"></span>
+						</div>
+					{:else if filteredExpenses.length > 0}
+						<p class="text-sm text-base-content/70">
+							共 {filteredCount} 筆，合計 <strong class="tabular-nums">{formatAmount(filteredTotal)}</strong>
+						</p>
+						<div class="overflow-x-auto">
+							<table class="table table-sm">
+								<thead>
+									<tr>
+										<th>日期</th>
+										<th>分類</th>
+										<th class="text-right">金額</th>
+										<th>固定</th>
+									</tr>
+								</thead>
+								<tbody>
+									{#each filteredExpenses as exp}
+										<tr class="hover">
+											<td>{exp.expense_date}</td>
+											<td>{exp.normalized_category}</td>
+											<td class="text-right tabular-nums">{formatAmount(exp.amount)}</td>
+											<td>{exp.is_fixed_expense ? '是' : ''}</td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						</div>
+					{:else}
+						<p class="text-base-content/50">無符合條件的資料。</p>
+					{/if}
+				</div>
+			</div>
+		{/if}
+
+		<div class="text-sm">
+			<a href="/reports/details?month={selectedMonth}" class="link link-primary">查看完整明細</a>
+		</div>
 	{/if}
 </div>
-
-<style>
-	.reports-page {
-		max-width: 800px;
-		margin: 0 auto;
-		padding: 1rem;
-		font-family: system-ui, sans-serif;
-	}
-
-	.month-selector {
-		margin-bottom: 1rem;
-	}
-
-	.month-selector label {
-		font-weight: 600;
-		margin-right: 0.5rem;
-	}
-
-	.month-selector select {
-		padding: 0.3rem 0.5rem;
-		font-size: 1rem;
-	}
-
-	.total-card {
-		display: flex;
-		flex-direction: column;
-		background: #f0f6ff;
-		padding: 1.5rem;
-		border-radius: 8px;
-		margin-bottom: 1rem;
-	}
-
-	.total-label {
-		font-size: 0.9rem;
-		color: #555;
-	}
-
-	.total-amount {
-		font-size: clamp(1.4rem, 5vw, 2rem);
-		font-weight: 700;
-		color: #1a1a1a;
-	}
-
-	.comparison-card {
-		background: #fafafa;
-		padding: 0.75rem 1rem;
-		border-radius: 6px;
-		margin-bottom: 1.5rem;
-		font-size: 0.95rem;
-	}
-
-	.diff-up {
-		color: #c00;
-		font-weight: 600;
-	}
-
-	.diff-down {
-		color: #080;
-		font-weight: 600;
-	}
-
-	/* T4.5: Filter chip */
-	.filter-chip {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.4rem;
-		background: #e3f0ff;
-		border: 1px solid #a0c4e8;
-		padding: 0.3rem 0.7rem;
-		border-radius: 20px;
-		font-size: 0.9rem;
-		margin-bottom: 1rem;
-	}
-
-	.chip-clear {
-		background: none;
-		border: none;
-		font-size: 1.1rem;
-		cursor: pointer;
-		padding: 0 0.2rem;
-		line-height: 1;
-		color: #555;
-	}
-
-	.chip-clear:hover {
-		color: #c00;
-	}
-
-	/* T4.5: Category button in ranking table */
-	.category-btn {
-		background: none;
-		border: none;
-		color: #0066cc;
-		cursor: pointer;
-		padding: 0;
-		font: inherit;
-		text-align: left;
-	}
-
-	.category-btn:hover {
-		text-decoration: underline;
-	}
-
-	tr.selected-row {
-		background: #e3f0ff;
-	}
-
-	.summary {
-		margin-bottom: 0.5rem;
-		font-size: 0.95rem;
-	}
-
-	section {
-		margin-bottom: 2rem;
-	}
-
-	.table-scroll {
-		overflow-x: auto;
-	}
-
-	table {
-		width: 100%;
-		border-collapse: collapse;
-		margin-top: 0.5rem;
-	}
-
-	th, td {
-		border: 1px solid #ddd;
-		padding: 0.4rem 0.6rem;
-		text-align: left;
-	}
-
-	th {
-		background: #f5f5f5;
-		font-size: 0.85rem;
-	}
-
-	td.amount {
-		text-align: right;
-		font-variant-numeric: tabular-nums;
-	}
-
-	.chart-container {
-		max-width: 500px;
-		margin: 0 auto;
-	}
-
-	.error {
-		color: #c00;
-	}
-
-	.nav-link {
-		margin-top: 2rem;
-		font-size: 0.9rem;
-	}
-
-	.nav-link a {
-		color: #0066cc;
-	}
-</style>
