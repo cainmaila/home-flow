@@ -9,6 +9,7 @@
 - 技術架構與部署： [docs/prd/Architecture.md](docs/prd/Architecture.md)
 - 資料規則與匯入策略： [docs/prd/Data-Rules.md](docs/prd/Data-Rules.md)
 - 任務拆解與執行順序： [docs/prd/Tasks.md](docs/prd/Tasks.md)
+- 分類系統重設計： [docs/prd/Category-Redesign.md](docs/prd/Category-Redesign.md)
 
 ## 2. 要解決的問題
 
