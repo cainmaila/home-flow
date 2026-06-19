@@ -35,9 +35,9 @@
       驗收: 相近格式樣本仍可解析
 - [x] T2.4 標準化為 expense 模型 | 依賴: T2.3 | 狀態: done
       驗收: 產出符合 schema 的列
-- [ ] T2.5 preview→commit + 增量合併 | 依賴: T2.4 | 狀態: todo
+- [x] T2.5 preview→commit + 增量合併 | 依賴: T2.4 | 狀態: done
       驗收: 同檔重匯 inserted=0、duplicate=全部；改一格金額重匯出現 1 筆更新候選
-- [ ] T2.6 import job + 匯入摘要 + 歷程 | 依賴: T2.5 | 狀態: todo
+- [x] T2.6 import job + 匯入摘要 + 歷程 | 依賴: T2.5 | 狀態: done
       驗收: commit 後歷程列出時間、匯入者、筆數、狀態
 - [ ] T2.7 錯誤分級 | 依賴: T2.2 | 狀態: todo
       驗收: 壞日期／壞金額／空分類觸發 blocking 並清楚提示
