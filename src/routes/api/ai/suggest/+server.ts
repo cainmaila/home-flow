@@ -62,7 +62,6 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 
 	const suggestions = await suggestCategories(
 		unmatched,
-		[],
 		env.GOOGLE_AI_API_KEY!,
 		catsWithExamples
 	);

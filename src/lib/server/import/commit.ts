@@ -149,7 +149,7 @@ async function generatePostImportSuggestions(
 	const catsWithExamples = await loadCategoriesWithExamples(db, householdId);
 	if (catsWithExamples.length === 0) return { autoAccepted: 0, pending: 0, total: 0 };
 
-	const suggestions = await suggestCategories(unmatched, [], apiKey, catsWithExamples);
+	const suggestions = await suggestCategories(unmatched, apiKey, catsWithExamples);
 	if (suggestions.length === 0) return { autoAccepted: 0, pending: 0, total: 0 };
 
 	// Build name→id lookup from DB

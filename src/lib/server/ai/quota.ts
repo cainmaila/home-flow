@@ -61,14 +61,3 @@ export function getQuotaStatus(): { count: number; limit: number; month: string;
 		percentage: Math.round((state.count / state.limit) * 100)
 	};
 }
-
-export function setLimit(limit: number): void {
-	state.limit = limit;
-}
-
-/** For testing: reset quota state. */
-export function _resetForTest(): void {
-	state.count = 0;
-	state.month = getCurrentMonth();
-	state.limit = DEFAULT_MONTHLY_LIMIT;
-}

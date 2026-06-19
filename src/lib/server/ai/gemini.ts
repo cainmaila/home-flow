@@ -26,11 +26,6 @@ export function isAutoDisabledByFailures(): boolean {
 	return autoDisabled;
 }
 
-export function resetAutoDisable(): void {
-	consecutiveFailures = 0;
-	autoDisabled = false;
-}
-
 function buildPrompt(
 	unmatchedCategories: string[],
 	categoriesWithExamples: CategoryWithExamples[]
@@ -110,12 +105,11 @@ export async function loadCategoriesWithExamples(
 
 export async function suggestCategories(
 	unmatchedCategories: string[],
-	existingCategories: string[],
 	apiKey: string,
-	categoriesWithExamples?: CategoryWithExamples[]
+	categoriesWithExamples: CategoryWithExamples[]
 ): Promise<CategorySuggestion[]> {
 	if (autoDisabled) {
-		console.warn('[AI] Auto-disabled due to consecutive failures. Call resetAutoDisable() to re-enable.');
+		console.warn('[AI] Auto-disabled due to consecutive failures.');
 		return [];
 	}
 
@@ -125,12 +119,7 @@ export async function suggestCategories(
 	const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
 	try {
-		const cats = categoriesWithExamples ?? existingCategories.map((name) => ({
-			name: name.includes(' > ') ? name.split(' > ')[1] : name,
-			parent_name: name.includes(' > ') ? name.split(' > ')[0] : '',
-			description: null,
-			examples: []
-		}));
+		const cats = categoriesWithExamples;
 
 		const prompt = buildPrompt(unmatchedCategories, cats);
 		const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
