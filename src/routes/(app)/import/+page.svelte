@@ -33,6 +33,7 @@
 		duplicates: number;
 		updated: number;
 		skipped: number;
+		aiSuggestions?: { autoAccepted: number; pending: number; total: number };
 	} | null = $state(null);
 
 	let filename: string = $state('');
@@ -185,9 +186,19 @@
 							<tr><td>重複略過</td><td class="font-semibold">{commitResult.duplicates} 筆</td></tr>
 							<tr><td>更新</td><td class="font-semibold">{commitResult.updated} 筆</td></tr>
 							<tr><td>略過</td><td class="font-semibold">{commitResult.skipped} 筆</td></tr>
+							{#if commitResult.aiSuggestions}
+								<tr><td>AI 自動採納</td><td class="font-semibold">{commitResult.aiSuggestions.autoAccepted} 筆</td></tr>
+								<tr><td>AI 待人工確認</td><td class="font-semibold">{commitResult.aiSuggestions.pending} 筆</td></tr>
+							{/if}
 						</tbody>
 					</table>
 				</div>
+				{#if commitResult.aiSuggestions && commitResult.aiSuggestions.pending > 0}
+					<div class="alert alert-info text-sm">
+						有 {commitResult.aiSuggestions.pending} 筆低信心建議，請至
+						<a href="/corrections" class="link">分類校正</a> 頁確認。
+					</div>
+				{/if}
 				<div class="card-actions mt-4">
 					<button class="btn btn-primary btn-sm" onclick={reset}>匯入其他檔案</button>
 					<a href="/import/history" class="btn btn-ghost btn-sm">查看匯入歷程</a>

@@ -4,6 +4,12 @@
 	const HOUSEHOLD_ID = 'default';
 
 	let pending: { raw_category: string; count: number }[] = $state([]);
+	let aiSuggestions: {
+		id: string;
+		raw_category: string;
+		suggested_category: string;
+		confidence: number;
+	}[] = $state([]);
 	let aliases: {
 		id: string;
 		raw_category: string;
@@ -23,18 +29,20 @@
 		loading = true;
 		errorMessage = '';
 		try {
-			const [pendingRes, aliasRes] = await Promise.all([
+			const [pendingRes, aliasRes, aiRes] = await Promise.all([
 				fetch(`/api/categories/pending?householdId=${HOUSEHOLD_ID}`),
-				fetch(`/api/categories/alias?householdId=${HOUSEHOLD_ID}`)
+				fetch(`/api/categories/alias?householdId=${HOUSEHOLD_ID}`),
+				fetch('/api/ai/suggestions?status=pending')
 			]);
 
-			if (!pendingRes.ok || !aliasRes.ok) {
+			if (!pendingRes.ok || !aliasRes.ok || !aiRes.ok) {
 				errorMessage = '載入失敗';
 				return;
 			}
 
 			pending = await pendingRes.json();
 			aliases = await aliasRes.json();
+			aiSuggestions = ((await aiRes.json()) as { suggestions: typeof aiSuggestions }).suggestions;
 		} catch {
 			errorMessage = '網路錯誤';
 		} finally {
@@ -82,6 +90,27 @@
 		newAliasRaw = rawCategory;
 		newAliasNormalized = '';
 	}
+
+	async function resolveSuggestion(suggestionId: string, action: 'accept' | 'reject') {
+		errorMessage = '';
+		successMessage = '';
+		try {
+			const res = await fetch('/api/ai/suggestions/resolve', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ suggestionId, action })
+			});
+			if (!res.ok) {
+				const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+				errorMessage = String(body?.message ?? '處理建議失敗');
+				return;
+			}
+			successMessage = action === 'accept' ? '已採納 AI 建議' : '已忽略 AI 建議';
+			await loadData();
+		} catch {
+			errorMessage = '網路錯誤';
+		}
+	}
 </script>
 
 <div class="space-y-6">
@@ -122,6 +151,46 @@
 										<td>
 											<button class="btn btn-primary btn-xs" onclick={() => handlePendingMap(item.raw_category)}>
 												建立映射
+											</button>
+										</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				{/if}
+			</div>
+		</div>
+
+		<!-- AI suggestions pending review -->
+		<div class="card bg-base-100 shadow">
+			<div class="card-body">
+				<h2 class="card-title text-lg">AI 建議（待確認）({aiSuggestions.length})</h2>
+				{#if aiSuggestions.length === 0}
+					<p class="text-base-content/50">目前無待確認的 AI 建議。</p>
+				{:else}
+					<div class="overflow-x-auto">
+						<table class="table table-sm">
+							<thead>
+								<tr>
+									<th>原始分類</th>
+									<th>建議標準分類</th>
+									<th class="text-right">信心</th>
+									<th>操作</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each aiSuggestions as s}
+									<tr class="hover">
+										<td>{s.raw_category}</td>
+										<td>{s.suggested_category}</td>
+										<td class="text-right tabular-nums">{Math.round(s.confidence * 100)}%</td>
+										<td class="flex gap-2">
+											<button class="btn btn-success btn-xs" onclick={() => resolveSuggestion(s.id, 'accept')}>
+												採納
+											</button>
+											<button class="btn btn-ghost btn-xs" onclick={() => resolveSuggestion(s.id, 'reject')}>
+												忽略
 											</button>
 										</td>
 									</tr>
