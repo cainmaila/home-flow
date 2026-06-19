@@ -21,6 +21,8 @@
 	let loading = $state(true);
 	let errorMessage = $state('');
 	let successMessage = $state('');
+	let aiLoading = $state(false);
+	let selectedSuggestions: Set<string> = $state(new Set());
 
 	let newAliasRaw = $state('');
 	let newAliasNormalized = $state('');
@@ -91,24 +93,93 @@
 		newAliasNormalized = '';
 	}
 
-	async function resolveSuggestion(suggestionId: string, action: 'accept' | 'reject') {
+	async function triggerAISuggestions() {
+		aiLoading = true;
 		errorMessage = '';
 		successMessage = '';
 		try {
-			const res = await fetch('/api/ai/suggestions/resolve', {
+			const res = await fetch('/api/ai/suggest', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ suggestionId, action })
+				body: JSON.stringify({ householdId: HOUSEHOLD_ID })
 			});
 			if (!res.ok) {
 				const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-				errorMessage = String(body?.message ?? '處理建議失敗');
+				errorMessage = String(body?.message ?? 'AI 建議產生失敗');
 				return;
 			}
-			successMessage = action === 'accept' ? '已採納 AI 建議' : '已忽略 AI 建議';
+			const data = (await res.json()) as { suggestions: unknown[] };
+			if (data.suggestions.length === 0) {
+				successMessage = '所有分類皆已有映射或建議，無需產生新建議。';
+			} else {
+				successMessage = `已產生 ${data.suggestions.length} 筆 AI 建議。`;
+			}
+			selectedSuggestions = new Set();
 			await loadData();
 		} catch {
 			errorMessage = '網路錯誤';
+		} finally {
+			aiLoading = false;
+		}
+	}
+
+	function toggleSelection(id: string) {
+		const next = new Set(selectedSuggestions);
+		if (next.has(id)) next.delete(id);
+		else next.add(id);
+		selectedSuggestions = next;
+	}
+
+	function toggleAll() {
+		if (selectedSuggestions.size === aiSuggestions.length) {
+			selectedSuggestions = new Set();
+		} else {
+			selectedSuggestions = new Set(aiSuggestions.map((s) => s.id));
+		}
+	}
+
+	async function acceptSelected() {
+		if (selectedSuggestions.size === 0) return;
+		errorMessage = '';
+		successMessage = '';
+		const ids = [...selectedSuggestions];
+		let accepted = 0;
+		for (const id of ids) {
+			try {
+				await resolveSuggestion(id, 'accept', true);
+				accepted++;
+			} catch {
+				break;
+			}
+		}
+		if (accepted > 0) {
+			successMessage = `已採納 ${accepted} 筆 AI 建議。`;
+		}
+		if (accepted < ids.length) {
+			errorMessage = errorMessage || `部分建議採納失敗（${accepted}/${ids.length}）`;
+		}
+		selectedSuggestions = new Set();
+		await loadData();
+	}
+
+	async function resolveSuggestion(suggestionId: string, action: 'accept' | 'reject', silent = false) {
+		if (!silent) {
+			errorMessage = '';
+			successMessage = '';
+		}
+		const res = await fetch('/api/ai/suggestions/resolve', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ suggestionId, action })
+		});
+		if (!res.ok) {
+			const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+			errorMessage = String(body?.message ?? '處理建議失敗');
+			throw new Error(errorMessage);
+		}
+		if (!silent) {
+			successMessage = action === 'accept' ? '已採納 AI 建議' : '已忽略 AI 建議';
+			await loadData();
 		}
 	}
 </script>
@@ -165,14 +236,31 @@
 		<!-- AI suggestions pending review -->
 		<div class="card bg-base-100 shadow">
 			<div class="card-body">
-				<h2 class="card-title text-lg">AI 建議（待確認）({aiSuggestions.length})</h2>
+				<div class="flex items-center justify-between">
+					<h2 class="card-title text-lg">AI 建議（待確認）({aiSuggestions.length})</h2>
+					<button
+						class="btn btn-secondary btn-sm"
+						onclick={triggerAISuggestions}
+						disabled={aiLoading}
+					>
+						{#if aiLoading}
+							<span class="loading loading-spinner loading-xs"></span>
+						{/if}
+						AI 一鍵建議
+					</button>
+				</div>
 				{#if aiSuggestions.length === 0}
-					<p class="text-base-content/50">目前無待確認的 AI 建議。</p>
+					<p class="text-base-content/50">目前無待確認的 AI 建議。點擊「AI 一鍵建議」為未匹配分類產生建議。</p>
 				{:else}
 					<div class="overflow-x-auto">
 						<table class="table table-sm">
 							<thead>
 								<tr>
+									<th>
+										<input type="checkbox" class="checkbox checkbox-sm"
+											checked={selectedSuggestions.size === aiSuggestions.length && aiSuggestions.length > 0}
+											onchange={toggleAll} />
+									</th>
 									<th>原始分類</th>
 									<th>建議標準分類</th>
 									<th class="text-right">信心</th>
@@ -182,13 +270,15 @@
 							<tbody>
 								{#each aiSuggestions as s}
 									<tr class="hover">
+										<td>
+											<input type="checkbox" class="checkbox checkbox-sm"
+												checked={selectedSuggestions.has(s.id)}
+												onchange={() => toggleSelection(s.id)} />
+										</td>
 										<td>{s.raw_category}</td>
 										<td>{s.suggested_category}</td>
 										<td class="text-right tabular-nums">{Math.round(s.confidence * 100)}%</td>
-										<td class="flex gap-2">
-											<button class="btn btn-success btn-xs" onclick={() => resolveSuggestion(s.id, 'accept')}>
-												採納
-											</button>
+										<td>
 											<button class="btn btn-ghost btn-xs" onclick={() => resolveSuggestion(s.id, 'reject')}>
 												忽略
 											</button>
@@ -197,6 +287,15 @@
 								{/each}
 							</tbody>
 						</table>
+					</div>
+					<div class="card-actions justify-end mt-2">
+						<button
+							class="btn btn-success btn-sm"
+							onclick={acceptSelected}
+							disabled={selectedSuggestions.size === 0}
+						>
+							確認選取 ({selectedSuggestions.size})
+						</button>
 					</div>
 				{/if}
 			</div>
