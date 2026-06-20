@@ -1,6 +1,9 @@
+import { setExpenseTags } from '../tags';
+
 export interface ResolveResult {
 	category_id: number | null;
 	source: 'override' | 'manual' | 'ai_auto' | 'fallback' | null;
+	tags?: string[];
 }
 
 /**
@@ -36,18 +39,23 @@ export async function resolveCategory(
 	// Layer 2 & 3: alias lookup (manual wins over ai_auto via ORDER BY)
 	const alias = await db
 		.prepare(
-			`SELECT category_id, source FROM category_aliases
+			`SELECT category_id, source, tags FROM category_aliases
 			 WHERE household_id = ? AND raw_category = ? AND category_id IS NOT NULL
 			 ORDER BY CASE source WHEN 'manual' THEN 0 WHEN 'ai_auto' THEN 1 END
 			 LIMIT 1`
 		)
 		.bind(householdId, rawCategory)
-		.first<{ category_id: number; source: string }>();
+		.first<{ category_id: number; source: string; tags: string | null }>();
 
 	if (alias) {
+		let tags: string[] | undefined;
+		if (alias.tags) {
+			try { tags = JSON.parse(alias.tags); } catch { /* bad JSON → skip */ }
+		}
 		return {
 			category_id: alias.category_id,
-			source: alias.source as 'manual' | 'ai_auto'
+			source: alias.source as 'manual' | 'ai_auto',
+			tags
 		};
 	}
 
@@ -100,6 +108,9 @@ export async function resolveCategoriesForImport(
 				)
 				.bind(result.category_id, expense.id)
 				.run();
+			if (result.tags && result.tags.length > 0) {
+				await setExpenseTags(db, householdId, expense.id, result.tags);
+			}
 			resolved++;
 		} else {
 			pending++;

@@ -4,6 +4,7 @@ export interface CategorySuggestion {
 	raw_category: string;
 	suggested_category: string;
 	confidence: number;
+	tags: string[];
 }
 
 export interface CategoryWithExamples {
@@ -54,11 +55,11 @@ ${JSON.stringify(unmatchedCategories)}
 Available categories (format: parent > child):
 ${categoryBlock}
 
-For each unmatched category, suggest the best matching child category name (just the child name, not "parent > child") and a confidence score (0 to 1).
+For each unmatched category, suggest the best matching child category name (just the child name, not "parent > child"), a confidence score (0 to 1), and 1-3 short tags for filtering (e.g. 便利商店, 訂閱, 固定, 外食).
 If no good match exists, use the closest category with a low confidence.
 
 Respond ONLY with a JSON array, no markdown, no explanation:
-[{"raw_category":"...","suggested_category":"...","confidence":0.XX}]`;
+[{"raw_category":"...","suggested_category":"...","confidence":0.XX,"tags":["..."]}]`;
 }
 
 /**
@@ -145,14 +146,19 @@ export async function suggestCategories(
 
 		const suggestions = JSON.parse(jsonMatch[0]) as CategorySuggestion[];
 
-		const valid = suggestions.filter(
-			(s) =>
-				typeof s.raw_category === 'string' &&
-				typeof s.suggested_category === 'string' &&
-				typeof s.confidence === 'number' &&
-				s.confidence >= 0 &&
-				s.confidence <= 1
-		);
+		const valid = suggestions
+			.filter(
+				(s) =>
+					typeof s.raw_category === 'string' &&
+					typeof s.suggested_category === 'string' &&
+					typeof s.confidence === 'number' &&
+					s.confidence >= 0 &&
+					s.confidence <= 1
+			)
+			.map((s) => ({
+				...s,
+				tags: Array.isArray(s.tags) ? s.tags.filter((t): t is string => typeof t === 'string') : []
+			}));
 
 		consecutiveFailures = 0;
 		recordCall();

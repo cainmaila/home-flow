@@ -3,6 +3,7 @@ import { resolveCategoriesForImport } from '../category/resolve';
 import { isAIEnabled, getAutoAcceptThreshold } from '../ai/config';
 import { suggestCategories, loadCategoriesWithExamples } from '../ai/gemini';
 import { isAutoSuggestDisabled, isQuotaExceeded } from '../ai/quota';
+import { setExpenseTags } from '../tags';
 
 export interface AISuggestionResult {
 	autoAccepted: number;
@@ -50,8 +51,8 @@ export async function commitImport(
 			const id = crypto.randomUUID();
 			await db
 				.prepare(
-					`INSERT INTO expenses (id, household_id, expense_date, raw_category, normalized_category, amount, is_fixed_expense, source_import_id)
-					 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+					`INSERT INTO expenses (id, household_id, expense_date, raw_category, normalized_category, amount, is_fixed_expense, source_import_id, detail)
+					 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 				)
 				.bind(
 					id,
@@ -61,7 +62,8 @@ export async function commitImport(
 					pr.record.normalized_category ?? null,
 					pr.record.amount,
 					pr.record.is_fixed_expense ? 1 : 0,
-					importId
+					importId,
+					pr.record.raw_category
 				)
 				.run();
 			inserted++;
@@ -173,25 +175,40 @@ async function generatePostImportSuggestions(
 		const categoryId = nameToId.get(s.suggested_category);
 
 		if (s.confidence >= threshold && categoryId) {
+			const tagsJson = s.tags.length > 0 ? JSON.stringify(s.tags) : null;
 			await db
 				.prepare(
-					`INSERT INTO category_aliases (id, household_id, raw_category, normalized_category, category_id, source)
-					 VALUES (?, ?, ?, ?, ?, 'ai_auto')
+					`INSERT INTO category_aliases (id, household_id, raw_category, normalized_category, category_id, source, tags)
+					 VALUES (?, ?, ?, ?, ?, 'ai_auto', ?)
 					 ON CONFLICT (household_id, raw_category) DO UPDATE SET
 					   normalized_category = excluded.normalized_category,
 					   category_id = excluded.category_id,
-					   source = 'ai_auto'`
+					   source = 'ai_auto',
+					   tags = excluded.tags`
 				)
-				.bind(crypto.randomUUID(), householdId, s.raw_category, s.suggested_category, categoryId)
+				.bind(crypto.randomUUID(), householdId, s.raw_category, s.suggested_category, categoryId, tagsJson)
 				.run();
 
-			await db
+			const affected = await db
 				.prepare(
-					`UPDATE expenses SET category_id = ?, updated_at = datetime('now')
+					`SELECT id FROM expenses
 					 WHERE household_id = ? AND raw_category = ? AND category_id IS NULL`
 				)
-				.bind(categoryId, householdId, s.raw_category)
-				.run();
+				.bind(householdId, s.raw_category)
+				.all<{ id: string }>();
+
+			for (const exp of affected.results) {
+				await db
+					.prepare(
+						`UPDATE expenses SET category_id = ?, updated_at = datetime('now')
+						 WHERE id = ?`
+					)
+					.bind(categoryId, exp.id)
+					.run();
+				if (s.tags.length > 0) {
+					await setExpenseTags(db, householdId, exp.id, s.tags);
+				}
+			}
 
 			await db
 				.prepare(
