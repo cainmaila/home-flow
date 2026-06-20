@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+	import AddExpenseModal from '$lib/components/AddExpenseModal.svelte';
 	let { children } = $props();
 
 	const links = [
@@ -42,7 +43,8 @@
 				{/each}
 			</ul>
 		</div>
-		<div class="navbar-end">
+		<div class="navbar-end gap-1">
+			<AddExpenseModal />
 			<a href="/auth/logout" class="btn btn-ghost btn-sm">登出</a>
 		</div>
 	</div>

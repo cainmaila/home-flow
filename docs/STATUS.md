@@ -153,3 +153,8 @@ PRD: [docs/prd/Category-Redesign.md](docs/prd/Category-Redesign.md)
       備註: 校正頁 AI 建議批次採納已存在；待確認映射因各 raw 需不同目標分類，批次價值低，暫不做
 - [x] T10.3 排序指示 icon 化 | 依賴: 無 | 狀態: done
       驗收: 明細表排序指示由 ASCII ▲▼ 改為 SVG chevron snippet（primary 色、asc 旋轉 180）；截圖驗證
+
+## M11 — 手動記帳
+
+- [ ] T11.1 新增單筆支出（header 入口 + modal 表單） | 依賴: T7.2 | 狀態: wip
+      驗收: navbar「+ 記一筆」→ modal 填日期/金額/分類/固定 → POST /api/expenses 寫入 DB；送出後保留日期分類可連續記帳
