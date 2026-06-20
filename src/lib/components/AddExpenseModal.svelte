@@ -10,11 +10,15 @@
 	let amount = $state('');
 	let categoryId = $state<number | null>(null);
 	let isFixed = $state(false);
+	let detail = $state('');
+	let tagsInput = $state('');
 
 	interface CategoryChild { id: number; name: string }
 	interface CategoryGroup { id: number; name: string; children: CategoryChild[] }
 	let categories: CategoryGroup[] = $state([]);
 	let categoriesLoaded = false;
+
+	let availableTags: { id: number; name: string }[] = $state([]);
 
 	let amountInput: HTMLInputElement | undefined = $state();
 
@@ -27,10 +31,18 @@
 		} catch { /* non-blocking */ }
 	}
 
+	async function loadTagsList() {
+		try {
+			const res = await fetch('/api/tags');
+			if (res.ok) availableTags = await res.json();
+		} catch { /* non-blocking */ }
+	}
+
 	function openModal() {
 		open = true;
 		feedback = '';
 		loadCategories();
+		loadTagsList();
 		requestAnimationFrame(() => amountInput?.focus());
 	}
 
@@ -46,7 +58,9 @@
 					expense_date: expenseDate,
 					amount: Number(amount),
 					category_id: categoryId,
-					is_fixed_expense: isFixed
+					is_fixed_expense: isFixed,
+					detail: detail || undefined,
+					tags: tagsInput ? tagsInput.split(',').map((t: string) => t.trim()).filter(Boolean) : undefined
 				})
 			});
 			if (!res.ok) {
@@ -56,6 +70,8 @@
 			}
 			feedback = '✓ 已新增';
 			amount = '';
+			detail = '';
+			tagsInput = '';
 			requestAnimationFrame(() => amountInput?.focus());
 		} catch {
 			feedback = '網路錯誤';
@@ -128,6 +144,29 @@
 						</optgroup>
 					{/each}
 				</select>
+			</div>
+
+			<div class="form-control mb-2">
+				<label class="label" for="add-detail">
+					<span class="label-text flex items-center gap-1">
+						<Icon icon={icons.receipt} class="text-base opacity-60" />明細
+					</span>
+				</label>
+				<input id="add-detail" type="text" class="input input-bordered input-sm" bind:value={detail} placeholder="例：全聯買菜" />
+			</div>
+
+			<div class="form-control mb-2">
+				<label class="label" for="add-tags">
+					<span class="label-text flex items-center gap-1">
+						<Icon icon={icons.tag} class="text-base opacity-60" />標籤
+					</span>
+				</label>
+				<input id="add-tags" type="text" class="input input-bordered input-sm" bind:value={tagsInput} placeholder="逗號分隔，例：老婆,菜" list="add-tag-options" />
+				<datalist id="add-tag-options">
+					{#each availableTags as tag}
+						<option value={tag.name}></option>
+					{/each}
+				</datalist>
 			</div>
 
 			<div class="form-control mb-4">

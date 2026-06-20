@@ -16,6 +16,7 @@ export const GET: RequestHandler = async ({ platform, locals, url }) => {
 	const category = url.searchParams.get('category');
 	const categoryId = url.searchParams.get('categoryId');
 	const fixed = url.searchParams.get('fixed');
+	const tagsParam = url.searchParams.get('tags');
 
 	const conditions: string[] = ['e.household_id = ?'];
 	const binds: (string | number)[] = [HOUSEHOLD_ID];
@@ -43,6 +44,16 @@ export const GET: RequestHandler = async ({ platform, locals, url }) => {
 		conditions.push('e.is_fixed_expense = ?');
 		binds.push(fixed === 'true' ? 1 : 0);
 	}
+	if (tagsParam) {
+		const tagNames = tagsParam.split(',').map((t) => t.trim()).filter(Boolean);
+		if (tagNames.length > 0) {
+			const ph = tagNames.map(() => '?').join(',');
+			conditions.push(
+				`EXISTS (SELECT 1 FROM expense_tags et2 JOIN tags t2 ON et2.tag_id = t2.id WHERE et2.expense_id = e.id AND t2.name IN (${ph}))`
+			);
+			binds.push(...tagNames);
+		}
+	}
 
 	const where = conditions.join(' AND ');
 
@@ -59,8 +70,10 @@ export const GET: RequestHandler = async ({ platform, locals, url }) => {
 	const rows = await db
 		.prepare(
 			`SELECT e.id, e.expense_date, e.raw_category, e.category_id, e.amount, e.is_fixed_expense,
+			        e.detail,
 			        COALESCE(c.name, e.raw_category) as category_name,
-			        p.name as parent_category_name
+			        p.name as parent_category_name,
+			        (SELECT GROUP_CONCAT(t.name) FROM expense_tags et JOIN tags t ON et.tag_id = t.id WHERE et.expense_id = e.id) as tag_names
 			 FROM expenses e
 			 LEFT JOIN categories c ON e.category_id = c.id
 			 LEFT JOIN categories p ON c.parent_id = p.id
@@ -75,8 +88,10 @@ export const GET: RequestHandler = async ({ platform, locals, url }) => {
 			category_id: number | null;
 			amount: number;
 			is_fixed_expense: number;
+			detail: string | null;
 			category_name: string;
 			parent_category_name: string | null;
+			tag_names: string | null;
 		}>();
 
 	const expenses = rows.results.map((r) => ({
@@ -88,7 +103,9 @@ export const GET: RequestHandler = async ({ platform, locals, url }) => {
 		parent_category_name: r.parent_category_name,
 		normalized_category: r.category_name,
 		amount: r.amount,
-		is_fixed_expense: r.is_fixed_expense === 1
+		is_fixed_expense: r.is_fixed_expense === 1,
+		detail: r.detail,
+		tags: r.tag_names ? r.tag_names.split(',') : []
 	}));
 
 	return json({

@@ -1,6 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { requireAdmin } from '$lib/server/auth/guard';
+import { setExpenseTags } from '$lib/server/tags';
 
 const HOUSEHOLD_ID = 'default';
 
@@ -14,6 +15,8 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 		amount: number;
 		category_id: number;
 		is_fixed_expense?: boolean;
+		detail?: string;
+		tags?: string[];
 	};
 
 	if (!body.expense_date || !/^\d{4}-\d{2}-\d{2}$/.test(body.expense_date))
@@ -30,10 +33,11 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 	if (!cat) throw error(400, 'Invalid category');
 
 	const id = crypto.randomUUID();
+	const detail = body.detail?.trim().slice(0, 200) || null;
 	await db
 		.prepare(
-			`INSERT INTO expenses (id, household_id, expense_date, raw_category, category_id, amount, is_fixed_expense)
-			 VALUES (?, ?, ?, '手動輸入', ?, ?, ?)`
+			`INSERT INTO expenses (id, household_id, expense_date, raw_category, category_id, amount, is_fixed_expense, detail)
+			 VALUES (?, ?, ?, '手動輸入', ?, ?, ?, ?)`
 		)
 		.bind(
 			id,
@@ -41,9 +45,14 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 			body.expense_date,
 			body.category_id,
 			body.amount,
-			body.is_fixed_expense ? 1 : 0
+			body.is_fixed_expense ? 1 : 0,
+			detail
 		)
 		.run();
+
+	if (body.tags && body.tags.length > 0) {
+		await setExpenseTags(db, HOUSEHOLD_ID, id, body.tags);
+	}
 
 	return json({ id });
 };

@@ -11,6 +11,7 @@
 	let filterDateTo = $state('');
 	let filterCategory = $state('');
 	let filterFixed = $state(''); // '' | 'true' | 'false'
+	let filterTag = $state('');
 
 	let loading = $state(true);
 	let errorMessage = $state('');
@@ -28,6 +29,8 @@
 		parent_category_name?: string | null;
 		amount: number;
 		is_fixed_expense: boolean;
+		detail?: string | null;
+		tags?: string[];
 	}
 
 	let expenses: Expense[] = $state([]);
@@ -43,12 +46,17 @@
 	let editAmount = $state('');
 	let editCategoryId = $state<number | null>(null);
 	let editFixed = $state(false);
+	let editDetail = $state('');
+	let editTags = $state('');
 	let saving = $state(false);
 
 	// --- Categories for edit dropdown ---
 	interface CategoryChild { id: number; name: string }
 	interface CategoryGroup { id: number; name: string; children: CategoryChild[] }
 	let categories: CategoryGroup[] = $state([]);
+
+	// --- Tags for filter + datalist ---
+	let availableTags: { id: number; name: string }[] = $state([]);
 
 	// --- Delete confirm ---
 	let deletingId = $state<string | null>(null);
@@ -87,6 +95,16 @@
 		}
 	}
 
+	async function loadTags() {
+		try {
+			const res = await fetch('/api/tags');
+			if (!res.ok) return;
+			availableTags = await res.json();
+		} catch {
+			// Non-blocking
+		}
+	}
+
 	async function search() {
 		loading = true;
 		errorMessage = '';
@@ -98,6 +116,7 @@
 		if (filterDateTo) params.set('dateTo', filterDateTo);
 		if (filterCategory) params.set('category', filterCategory);
 		if (filterFixed) params.set('fixed', filterFixed);
+		if (filterTag) params.set('tags', filterTag);
 
 		try {
 			const res = await fetch(`/api/expenses/search?${params}`);
@@ -206,6 +225,7 @@
 		filterDateTo = '';
 		filterCategory = '';
 		filterFixed = '';
+		filterTag = '';
 		search();
 	}
 
@@ -215,6 +235,8 @@
 		editAmount = String(exp.amount);
 		editCategoryId = exp.category_id ?? null;
 		editFixed = exp.is_fixed_expense;
+		editDetail = exp.detail ?? '';
+		editTags = (exp.tags ?? []).join(',');
 	}
 
 	function cancelEdit() {
@@ -237,7 +259,9 @@
 					expense_date: editDate,
 					amount: Number(editAmount),
 					category_id: editCategoryId,
-					is_fixed_expense: editFixed
+					is_fixed_expense: editFixed,
+					detail: editDetail || null,
+					tags: editTags ? editTags.split(',').map((t: string) => t.trim()).filter(Boolean) : []
 				})
 			});
 			if (!res.ok) {
@@ -281,7 +305,7 @@
 		filterDateTo = params.get('dateTo') ?? '';
 		filterFixed = params.get('fixed') ?? '';
 
-		await Promise.all([loadMeta(), loadCategories()]);
+		await Promise.all([loadMeta(), loadCategories(), loadTags()]);
 		await search();
 	});
 </script>
@@ -325,6 +349,16 @@
 						<option value="">全部</option>
 						<option value="true">固定</option>
 						<option value="false">非固定</option>
+					</select>
+				</label>
+
+				<label class="form-control w-auto">
+					<div class="label"><span class="label-text font-semibold">標籤</span></div>
+					<select class="select select-bordered select-sm" bind:value={filterTag} onchange={() => search()}>
+						<option value="">全部</option>
+						{#each availableTags as tag}
+							<option value={tag.name}>{tag.name}</option>
+						{/each}
 					</select>
 				</label>
 			</div>
@@ -389,9 +423,11 @@
 									<th class="cursor-pointer select-none" onclick={() => handleSort('normalized_category')}>
 										分類 {@render sortIcon('normalized_category')}
 									</th>
+									<th>明細</th>
 									<th class="cursor-pointer select-none text-right" onclick={() => handleSort('amount')}>
 										金額 {@render sortIcon('amount')}
 									</th>
+									<th>標籤</th>
 									<th>固定</th>
 									<th class="w-24"></th>
 								</tr>
@@ -417,7 +453,13 @@
 												</select>
 											</td>
 											<td>
+												<input type="text" class="input input-bordered input-xs w-32" bind:value={editDetail} onkeydown={editKeydown} placeholder="明細" />
+											</td>
+											<td>
 												<input type="number" class="input input-bordered input-xs w-24 text-right" bind:value={editAmount} onkeydown={editKeydown} />
+											</td>
+											<td>
+												<input type="text" class="input input-bordered input-xs w-32" bind:value={editTags} onkeydown={editKeydown} placeholder="逗號分隔" list="tag-options" />
 											</td>
 											<td>
 												<input type="checkbox" class="checkbox checkbox-xs" bind:checked={editFixed} />
@@ -434,7 +476,9 @@
 											</td>
 											<td>{exp.expense_date}</td>
 											<td>{exp.parent_category_name ? `${exp.parent_category_name} > ` : ''}{exp.normalized_category}</td>
+											<td class="text-sm text-base-content/70">{exp.detail ?? ''}</td>
 											<td class="text-right tabular-nums">{formatAmount(exp.amount)}</td>
+											<td class="space-x-1">{#each exp.tags ?? [] as tag}<span class="badge badge-sm badge-outline">{tag}</span>{/each}</td>
 											<td>{exp.is_fixed_expense ? '是' : ''}</td>
 											<td class="opacity-0 group-hover:opacity-100 transition-opacity">
 												<div class="flex gap-1">
@@ -448,10 +492,9 @@
 							</tbody>
 							<tfoot>
 								<tr class="font-semibold">
-									<td colspan="3">合計</td>
+									<td colspan="4">合計</td>
 									<td class="text-right tabular-nums">{formatAmount(total)}</td>
-									<td></td>
-									<td></td>
+									<td colspan="3"></td>
 								</tr>
 							</tfoot>
 						</table>
@@ -478,6 +521,12 @@
 		<button type="button" class="modal-backdrop" aria-label="關閉" onclick={() => (deletingId = null)}></button>
 	</div>
 {/if}
+
+<datalist id="tag-options">
+	{#each availableTags as tag}
+		<option value={tag.name}></option>
+	{/each}
+</datalist>
 
 <!-- Bulk delete confirm modal -->
 {#if showBulkDelete}
