@@ -156,5 +156,10 @@ PRD: [docs/prd/Category-Redesign.md](docs/prd/Category-Redesign.md)
 
 ## M11 — 手動記帳
 
-- [ ] T11.1 新增單筆支出（header 入口 + modal 表單） | 依賴: T7.2 | 狀態: wip
+- [x] T11.1 新增單筆支出（header 入口 + modal 表單） | 依賴: T7.2 | 狀態: done
       驗收: navbar「+ 記一筆」→ modal 填日期/金額/分類/固定 → POST /api/expenses 寫入 DB；送出後保留日期分類可連續記帳
+
+## M12 — 全站 Icon 設計系統
+
+- [x] T12.1 集中語意 icon 對照表 + 全站套用 | 依賴: 無 | 狀態: done
+      驗收: src/lib/icons.ts 單一來源（~25 語意 icon + 30 分類 icon）；nav/動作鈕/inline SVG/分類 emoji 全改 @iconify/svelte mdi；svelte-check 0 errors；元件無裸 mdi: 字面值

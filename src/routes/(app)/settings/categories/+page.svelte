@@ -1,6 +1,8 @@
 <script lang="ts">
+	import Icon from '@iconify/svelte';
+	import { icons, CATEGORY_ICONS } from '$lib/icons';
+	import CategoryIcon from '$lib/components/CategoryIcon.svelte';
 	const HOUSEHOLD_ID = 'default';
-	const ICONS = ['🍔','🍜','🍳','☕','🥤','🍎','🍪','👕','🏠','💧','⚡','🔥','🚗','⛽','🅿️','🚌','📚','🎮','🎬','💊','💰','📱','🛒','🎁','✂️','🧹','🐾','👶','💳','📦'];
 
 	interface CategoryChild {
 		id: number;
@@ -196,11 +198,11 @@
 <div class="space-y-6">
 	<div class="flex items-center justify-between">
 		<h1 class="text-2xl font-bold">分類管理</h1>
-		<button class="btn btn-primary btn-sm" onclick={openAddParent}>+ 新增大類</button>
+		<button class="btn btn-primary btn-sm gap-1" onclick={openAddParent}><Icon icon={icons.addCircle} class="text-base" />新增大類</button>
 	</div>
 
-	{#if error}<div class="alert alert-error text-sm"><span>{error}</span><button class="btn btn-ghost btn-xs ml-auto" aria-label="關閉" onclick={() => (error = '')}>✕</button></div>{/if}
-	{#if success}<div class="alert alert-success text-sm"><span>{success}</span><button class="btn btn-ghost btn-xs ml-auto" aria-label="關閉" onclick={() => (success = '')}>✕</button></div>{/if}
+	{#if error}<div class="alert alert-error text-sm"><span>{error}</span><button class="btn btn-ghost btn-xs ml-auto" aria-label="關閉" onclick={() => (error = '')}><Icon icon={icons.close} class="text-sm" /></button></div>{/if}
+	{#if success}<div class="alert alert-success text-sm"><span>{success}</span><button class="btn btn-ghost btn-xs ml-auto" aria-label="關閉" onclick={() => (success = '')}><Icon icon={icons.close} class="text-sm" /></button></div>{/if}
 
 	{#if loading}
 		<div class="flex justify-center items-center gap-3 py-12 text-base-content/60"><span class="loading loading-spinner loading-lg"></span> 載入中…</div>
@@ -224,9 +226,9 @@
 								<div class="flex items-center gap-2">
 									<span class="label-text">圖標</span>
 									<button class="btn btn-outline btn-sm min-w-[3rem]" onclick={() => showEditIconPicker = !showEditIconPicker}>
-										{editIcon || '選擇'}
+										{#if editIcon}<CategoryIcon icon={editIcon} class="text-lg" />{:else}選擇{/if}
 									</button>
-									{#if editIcon}<button class="btn btn-ghost btn-xs" onclick={() => editIcon = ''}>✕</button>{/if}
+									{#if editIcon}<button class="btn btn-ghost btn-xs" aria-label="清除圖標" onclick={() => editIcon = ''}><Icon icon={icons.close} class="text-sm" /></button>{/if}
 								</div>
 								<div class="flex items-center gap-2">
 									<label class="flex items-center gap-1 cursor-pointer">
@@ -238,32 +240,32 @@
 									{/if}
 								</div>
 								<div class="ml-auto flex gap-1">
-									<button class="btn btn-success btn-sm" onclick={() => saveEdit(parent.id)}>儲存</button>
-									<button class="btn btn-ghost btn-sm" onclick={() => { editingId = null; showEditIconPicker = false; }}>取消</button>
+									<button class="btn btn-success btn-sm gap-0.5" onclick={() => saveEdit(parent.id)}><Icon icon={icons.save} class="text-base" />儲存</button>
+									<button class="btn btn-ghost btn-sm gap-0.5" onclick={() => { editingId = null; showEditIconPicker = false; }}><Icon icon={icons.cancel} class="text-base" />取消</button>
 								</div>
 							</div>
 							{#if showEditIconPicker}
 								<div class="flex flex-wrap gap-1 p-2 bg-base-200 rounded-lg max-w-sm">
-									{#each ICONS as icon}
+									{#each CATEGORY_ICONS as icon}
 										<button
 											class="btn btn-ghost btn-sm text-lg px-1.5"
 											class:btn-active={editIcon === icon}
 											onclick={() => { editIcon = icon; showEditIconPicker = false; }}
-										>{icon}</button>
+										><Icon {icon} /></button>
 									{/each}
 								</div>
 							{/if}
 						</div>
 					{:else}
 						<div class="flex items-center gap-2">
-							{#if parent.icon}<span class="text-lg">{parent.icon}</span>{/if}
+							{#if parent.icon}<CategoryIcon icon={parent.icon} class="text-lg" />{/if}
 							{#if parent.color}<span class="w-3 h-3 rounded-full inline-block" style="background-color:{parent.color}"></span>{/if}
 							<h2 class="card-title text-lg">{parent.name}</h2>
 							{#if parent.description}<span class="text-xs text-base-content/50">— {parent.description}</span>{/if}
 							<div class="ml-auto flex gap-1">
-								<button class="btn btn-ghost btn-xs" onclick={() => startEdit(parent, true)}>編輯</button>
-								<button class="btn btn-ghost btn-xs text-error" onclick={() => pendingDelete = { id: parent.id, name: parent.name, isParent: true }}>刪除</button>
-								<button class="btn btn-primary btn-xs" onclick={() => openAddChild(parent.id, parent.name)}>+ 子類</button>
+								<button class="btn btn-ghost btn-xs gap-0.5" onclick={() => startEdit(parent, true)}><Icon icon={icons.edit} class="text-sm" />編輯</button>
+								<button class="btn btn-ghost btn-xs gap-0.5 text-error" onclick={() => pendingDelete = { id: parent.id, name: parent.name, isParent: true }}><Icon icon={icons.delete} class="text-sm" />刪除</button>
+								<button class="btn btn-primary btn-xs gap-0.5" onclick={() => openAddChild(parent.id, parent.name)}><Icon icon={icons.add} class="text-sm" />子類</button>
 							</div>
 						</div>
 					{/if}
@@ -277,9 +279,9 @@
 											<input class="input input-bordered input-xs w-28" class:input-error={editNameInvalid} bind:value={editName} onkeydown={(e) => editKeydown(e, child.id)} />
 											<div class="flex items-center gap-1">
 												<button class="btn btn-outline btn-xs min-w-[2.5rem]" onclick={() => showEditIconPicker = !showEditIconPicker}>
-													{editIcon || '📌'}
+													{#if editIcon}<CategoryIcon icon={editIcon} />{:else}<Icon icon={icons.pin} />{/if}
 												</button>
-												{#if editIcon}<button class="btn btn-ghost btn-xs" onclick={() => editIcon = ''}>✕</button>{/if}
+												{#if editIcon}<button class="btn btn-ghost btn-xs" aria-label="清除圖標" onclick={() => editIcon = ''}><Icon icon={icons.close} class="text-sm" /></button>{/if}
 											</div>
 											<label class="flex items-center gap-1 cursor-pointer">
 												<input type="checkbox" class="checkbox checkbox-xs" bind:checked={editColorEnabled} />
@@ -287,29 +289,29 @@
 													<input type="color" class="w-6 h-6 rounded cursor-pointer border-0" bind:value={editColor} />
 												{/if}
 											</label>
-											<button class="btn btn-success btn-xs" onclick={() => saveEdit(child.id)}>儲存</button>
-											<button class="btn btn-ghost btn-xs" onclick={() => { editingId = null; showEditIconPicker = false; }}>取消</button>
+											<button class="btn btn-success btn-xs gap-0.5" onclick={() => saveEdit(child.id)}><Icon icon={icons.save} class="text-sm" />儲存</button>
+											<button class="btn btn-ghost btn-xs gap-0.5" onclick={() => { editingId = null; showEditIconPicker = false; }}><Icon icon={icons.cancel} class="text-sm" />取消</button>
 										</div>
 										{#if showEditIconPicker}
 											<div class="flex flex-wrap gap-1 p-2 bg-base-100 rounded-lg max-w-xs">
-												{#each ICONS as icon}
+												{#each CATEGORY_ICONS as icon}
 													<button
 														class="btn btn-ghost btn-xs text-base px-1"
 														class:btn-active={editIcon === icon}
 														onclick={() => { editIcon = icon; showEditIconPicker = false; }}
-													>{icon}</button>
+													><Icon {icon} /></button>
 												{/each}
 											</div>
 										{/if}
 									</div>
 								{:else}
 									<div class="flex items-center gap-2 py-1 px-2 rounded hover:bg-base-200">
-										{#if child.icon}<span>{child.icon}</span>{/if}
+										{#if child.icon}<CategoryIcon icon={child.icon} />{/if}
 										{#if child.color}<span class="w-2.5 h-2.5 rounded-full inline-block" style="background-color:{child.color}"></span>{/if}
 										<span class="text-sm">{child.name}</span>
 										<div class="ml-auto flex gap-1">
-											<button class="btn btn-ghost btn-xs" onclick={() => startEdit(child, false)}>編輯</button>
-											<button class="btn btn-ghost btn-xs text-error" onclick={() => pendingDelete = { id: child.id, name: child.name, isParent: false }}>刪除</button>
+											<button class="btn btn-ghost btn-xs gap-0.5" onclick={() => startEdit(child, false)}><Icon icon={icons.edit} class="text-sm" />編輯</button>
+											<button class="btn btn-ghost btn-xs gap-0.5 text-error" onclick={() => pendingDelete = { id: child.id, name: child.name, isParent: false }}><Icon icon={icons.delete} class="text-sm" />刪除</button>
 										</div>
 									</div>
 								{/if}
@@ -352,20 +354,20 @@
 				<div class="label"><span class="label-text">圖標</span></div>
 				<div class="flex items-center gap-2">
 					<button class="btn btn-outline min-w-[3rem] text-lg" onclick={() => showIconPicker = !showIconPicker}>
-						{modalIcon || '選擇'}
+						{#if modalIcon}<CategoryIcon icon={modalIcon} class="text-lg" />{:else}選擇{/if}
 					</button>
 					{#if modalIcon}
-						<button class="btn btn-ghost btn-sm" onclick={() => modalIcon = ''}>清除</button>
+						<button class="btn btn-ghost btn-sm gap-0.5" onclick={() => modalIcon = ''}><Icon icon={icons.close} class="text-sm" />清除</button>
 					{/if}
 				</div>
 				{#if showIconPicker}
 					<div class="flex flex-wrap gap-1 p-2 mt-2 bg-base-200 rounded-lg">
-						{#each ICONS as icon}
+						{#each CATEGORY_ICONS as icon}
 							<button
 								class="btn btn-ghost btn-sm text-lg px-1.5"
 								class:btn-active={modalIcon === icon}
 								onclick={() => { modalIcon = icon; showIconPicker = false; }}
-							>{icon}</button>
+							><Icon {icon} /></button>
 						{/each}
 					</div>
 				{/if}
@@ -387,8 +389,8 @@
 		</div>
 
 		<div class="modal-action">
-			<button class="btn btn-ghost" onclick={closeModal}>取消</button>
-			<button class="btn btn-primary" onclick={submitAdd} disabled={!modalName.trim()}>新增</button>
+			<button class="btn btn-ghost gap-1" onclick={closeModal}><Icon icon={icons.cancel} class="text-base" />取消</button>
+			<button class="btn btn-primary gap-1" onclick={submitAdd} disabled={!modalName.trim()}><Icon icon={icons.addCircle} class="text-base" />新增</button>
 		</div>
 	</div>
 	<form method="dialog" class="modal-backdrop"><button>close</button></form>
@@ -404,8 +406,8 @@
 				{#if pendingDelete.isParent}其子分類會一併刪除，{/if}相關費用會變成未分類。此操作無法復原。
 			</p>
 			<div class="modal-action">
-				<button class="btn btn-ghost" onclick={() => (pendingDelete = null)}>取消</button>
-				<button class="btn btn-error" onclick={confirmDelete} disabled={deleting}>刪除</button>
+				<button class="btn btn-ghost gap-1" onclick={() => (pendingDelete = null)}><Icon icon={icons.cancel} class="text-base" />取消</button>
+				<button class="btn btn-error gap-1" onclick={confirmDelete} disabled={deleting}><Icon icon={icons.delete} class="text-base" />刪除</button>
 			</div>
 		</div>
 		<button type="button" class="modal-backdrop" aria-label="關閉" onclick={() => (pendingDelete = null)}></button>

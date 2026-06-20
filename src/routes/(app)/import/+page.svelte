@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Icon from '@iconify/svelte';
+	import { icons } from '$lib/icons';
 	const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 	const currentYear = new Date().getFullYear();
 	const HOUSEHOLD_ID = 'default';
@@ -202,8 +204,8 @@
 					</div>
 				{/if}
 				<div class="card-actions mt-4">
-					<button class="btn btn-primary btn-sm" onclick={reset}>匯入其他檔案</button>
-					<a href="/import/history" class="btn btn-ghost btn-sm">查看匯入歷程</a>
+					<button class="btn btn-primary btn-sm gap-1" onclick={reset}><Icon icon={icons.upload} class="text-base" />匯入其他檔案</button>
+					<a href="/import/history" class="btn btn-ghost btn-sm gap-1"><Icon icon={icons.nav.history} class="text-base" />查看匯入歷程</a>
 				</div>
 			</div>
 		</div>
@@ -289,10 +291,8 @@
 				{/if}
 
 				<div class="card-actions mt-4">
-					<button class="btn btn-primary btn-sm" onclick={handleCommit} disabled={committing}>
-						確認匯入
-					</button>
-					<button class="btn btn-ghost btn-sm" onclick={reset}>取消</button>
+					<button class="btn btn-primary btn-sm gap-1" onclick={handleCommit} disabled={committing}><Icon icon={icons.confirm} class="text-base" />確認匯入</button>
+					<button class="btn btn-ghost btn-sm gap-1" onclick={reset}><Icon icon={icons.cancel} class="text-base" />取消</button>
 				</div>
 			</div>
 		</div>
@@ -310,13 +310,13 @@
 				</label>
 
 				<div class="mt-4">
-					<button class="btn btn-primary btn-sm" onclick={handleUpload} disabled={status === 'uploading' || status === 'previewing'}>
+					<button class="btn btn-primary btn-sm gap-1" onclick={handleUpload} disabled={status === 'uploading' || status === 'previewing'}>
 						{#if status === 'uploading'}
 							<span class="loading loading-spinner loading-xs"></span> 上傳中...
 						{:else if status === 'previewing'}
 							<span class="loading loading-spinner loading-xs"></span> 分析中...
 						{:else}
-							上傳並預覽
+							<Icon icon={icons.upload} class="text-base" />上傳並預覽
 						{/if}
 					</button>
 				</div>

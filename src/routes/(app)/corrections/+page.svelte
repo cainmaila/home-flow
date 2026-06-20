@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Icon from '@iconify/svelte';
+	import { icons } from '$lib/icons';
 	const HOUSEHOLD_ID = 'default';
 
 	interface CategoryChild {
@@ -249,8 +251,8 @@
 										<td>{item.raw_category}</td>
 										<td class="text-right tabular-nums">{item.count}</td>
 										<td>
-											<button class="btn btn-primary btn-xs" onclick={() => handlePendingMap(item.raw_category)}>
-												建立映射
+											<button class="btn btn-primary btn-xs gap-0.5" onclick={() => handlePendingMap(item.raw_category)}>
+												<Icon icon={icons.link} class="text-sm" />建立映射
 											</button>
 										</td>
 									</tr>
@@ -268,12 +270,14 @@
 				<div class="flex items-center justify-between">
 					<h2 class="card-title text-lg">AI 建議（待確認）({aiSuggestions.length})</h2>
 					<button
-						class="btn btn-secondary btn-sm"
+						class="btn btn-secondary btn-sm gap-1"
 						onclick={triggerAISuggestions}
 						disabled={aiLoading}
 					>
 						{#if aiLoading}
 							<span class="loading loading-spinner loading-xs"></span>
+						{:else}
+							<Icon icon={icons.ai} class="text-base" />
 						{/if}
 						AI 一鍵建議
 					</button>
@@ -308,8 +312,8 @@
 										<td>{s.suggested_category}</td>
 										<td class="text-right tabular-nums">{Math.round(s.confidence * 100)}%</td>
 										<td>
-											<button class="btn btn-ghost btn-xs" onclick={() => resolveSuggestion(s.id, 'reject')}>
-												忽略
+											<button class="btn btn-ghost btn-xs gap-0.5" onclick={() => resolveSuggestion(s.id, 'reject')}>
+												<Icon icon={icons.cancel} class="text-sm" />忽略
 											</button>
 										</td>
 									</tr>
@@ -319,11 +323,11 @@
 					</div>
 					<div class="card-actions justify-end mt-2">
 						<button
-							class="btn btn-success btn-sm"
+							class="btn btn-success btn-sm gap-1"
 							onclick={acceptSelected}
 							disabled={selectedSuggestions.size === 0}
 						>
-							確認選取 ({selectedSuggestions.size})
+							<Icon icon={icons.confirm} class="text-base" />確認選取 ({selectedSuggestions.size})
 						</button>
 					</div>
 				{/if}
@@ -358,11 +362,11 @@
 						</select>
 					</label>
 					<button
-						class="btn btn-primary btn-sm"
+						class="btn btn-primary btn-sm gap-1"
 						onclick={() => createAlias(newAliasRaw, newAliasCategoryId)}
 						disabled={!newAliasRaw || !newAliasCategoryId}
 					>
-						確認
+						<Icon icon={icons.confirm} class="text-base" />確認
 					</button>
 				</div>
 			</div>

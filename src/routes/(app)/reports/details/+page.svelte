@@ -2,6 +2,8 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { SvelteSet } from 'svelte/reactivity';
+	import Icon from '@iconify/svelte';
+	import { icons } from '$lib/icons';
 
 	// --- Filter state ---
 	let filterMonth = $state('');
@@ -286,9 +288,7 @@
 
 {#snippet sortIcon(field: typeof sortField)}
 	{#if sortField === field}
-		<svg class="inline-block w-3 h-3 align-middle text-primary {sortAsc ? 'rotate-180' : ''}" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-			<path d="M3 4.5 6 7.5 9 4.5" stroke-linecap="round" stroke-linejoin="round" />
-		</svg>
+		<Icon icon={icons.sortChevron} class="inline-block text-sm align-middle text-primary {sortAsc ? 'rotate-180' : ''}" aria-hidden="true" />
 	{/if}
 {/snippet}
 
@@ -338,7 +338,7 @@
 					<div class="label"><span class="label-text font-semibold">日期到</span></div>
 					<input type="date" class="input input-bordered input-sm" bind:value={filterDateTo} onchange={() => search()} />
 				</label>
-				<button class="btn btn-ghost btn-sm" onclick={clearFilters}>清除篩選</button>
+				<button class="btn btn-ghost btn-sm gap-1" onclick={clearFilters}><Icon icon={icons.filterRemove} class="text-base" />清除篩選</button>
 			</div>
 		</div>
 	</div>
@@ -367,9 +367,9 @@
 						</optgroup>
 					{/each}
 				</select>
-				<button class="btn btn-primary btn-sm" onclick={bulkSetCategory} disabled={bulkCategoryId === null || saving}>套用分類</button>
-				<button class="btn btn-error btn-sm" onclick={() => (showBulkDelete = true)} disabled={saving}>刪除選取</button>
-				<button class="btn btn-ghost btn-sm" onclick={() => selected.clear()}>清除</button>
+				<button class="btn btn-primary btn-sm gap-1" onclick={bulkSetCategory} disabled={bulkCategoryId === null || saving}><Icon icon={icons.confirm} class="text-base" />套用分類</button>
+				<button class="btn btn-error btn-sm gap-1" onclick={() => (showBulkDelete = true)} disabled={saving}><Icon icon={icons.delete} class="text-base" />刪除選取</button>
+				<button class="btn btn-ghost btn-sm gap-1" onclick={() => selected.clear()}><Icon icon={icons.close} class="text-base" />清除</button>
 			</div>
 		{/if}
 
@@ -423,8 +423,8 @@
 												<input type="checkbox" class="checkbox checkbox-xs" bind:checked={editFixed} />
 											</td>
 											<td class="flex gap-1">
-												<button class="btn btn-success btn-xs" onclick={saveEdit} disabled={saving}>儲存</button>
-												<button class="btn btn-ghost btn-xs" onclick={cancelEdit}>取消</button>
+												<button class="btn btn-success btn-xs gap-0.5" onclick={saveEdit} disabled={saving}><Icon icon={icons.save} class="text-sm" />儲存</button>
+												<button class="btn btn-ghost btn-xs gap-0.5" onclick={cancelEdit}><Icon icon={icons.cancel} class="text-sm" />取消</button>
 											</td>
 										</tr>
 									{:else}
@@ -438,8 +438,8 @@
 											<td>{exp.is_fixed_expense ? '是' : ''}</td>
 											<td class="opacity-0 group-hover:opacity-100 transition-opacity">
 												<div class="flex gap-1">
-													<button class="btn btn-ghost btn-xs" onclick={() => startEdit(exp)}>編輯</button>
-													<button class="btn btn-ghost btn-xs text-error" onclick={() => confirmDelete(exp.id)}>刪除</button>
+													<button class="btn btn-ghost btn-xs gap-0.5" onclick={() => startEdit(exp)}><Icon icon={icons.edit} class="text-sm" />編輯</button>
+													<button class="btn btn-ghost btn-xs gap-0.5 text-error" onclick={() => confirmDelete(exp.id)}><Icon icon={icons.delete} class="text-sm" />刪除</button>
 												</div>
 											</td>
 										</tr>
@@ -471,8 +471,8 @@
 			<h3 class="font-bold text-lg">確認刪除</h3>
 			<p class="py-4">確定要刪除這筆支出嗎？此操作無法復原。</p>
 			<div class="modal-action">
-				<button class="btn btn-ghost" onclick={() => (deletingId = null)}>取消</button>
-				<button class="btn btn-error" onclick={doDelete} disabled={saving}>刪除</button>
+				<button class="btn btn-ghost gap-1" onclick={() => (deletingId = null)}><Icon icon={icons.cancel} class="text-base" />取消</button>
+				<button class="btn btn-error gap-1" onclick={doDelete} disabled={saving}><Icon icon={icons.delete} class="text-base" />刪除</button>
 			</div>
 		</div>
 		<button type="button" class="modal-backdrop" aria-label="關閉" onclick={() => (deletingId = null)}></button>
@@ -486,8 +486,8 @@
 			<h3 class="font-bold text-lg">確認刪除</h3>
 			<p class="py-4">確定要刪除選取的 <strong>{selected.size}</strong> 筆支出嗎？此操作無法復原。</p>
 			<div class="modal-action">
-				<button class="btn btn-ghost" onclick={() => (showBulkDelete = false)}>取消</button>
-				<button class="btn btn-error" onclick={bulkDelete} disabled={saving}>刪除</button>
+				<button class="btn btn-ghost gap-1" onclick={() => (showBulkDelete = false)}><Icon icon={icons.cancel} class="text-base" />取消</button>
+				<button class="btn btn-error gap-1" onclick={bulkDelete} disabled={saving}><Icon icon={icons.delete} class="text-base" />刪除</button>
 			</div>
 		</div>
 		<button type="button" class="modal-backdrop" aria-label="關閉" onclick={() => (showBulkDelete = false)}></button>

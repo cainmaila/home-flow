@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Icon from '@iconify/svelte';
+	import { icons } from '$lib/icons';
 	interface ImportRecord {
 		id: string;
 		filename: string;
@@ -56,7 +58,7 @@
 <div class="space-y-6">
 	<div class="flex items-center justify-between flex-wrap gap-4">
 		<h1 class="text-2xl font-bold">匯入歷程</h1>
-		<a href="/import" class="btn btn-ghost btn-sm">返回匯入</a>
+		<a href="/import" class="btn btn-ghost btn-sm gap-1"><Icon icon={icons.back} class="text-base" />返回匯入</a>
 	</div>
 
 	{#if loading}

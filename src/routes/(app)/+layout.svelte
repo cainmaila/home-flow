@@ -1,19 +1,19 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+	import Icon from '@iconify/svelte';
+	import { icons } from '$lib/icons';
 	import AddExpenseModal from '$lib/components/AddExpenseModal.svelte';
 	let { children } = $props();
 
 	const links = [
-		{ href: '/reports', label: '月報' },
-		{ href: '/reports/details', label: '明細' },
-		{ href: '/import', label: '匯入' },
-		{ href: '/corrections', label: '校正' },
-		{ href: '/import/history', label: '歷程' },
-		{ href: '/settings/categories', label: '分類' }
+		{ href: '/reports', label: '月報', icon: icons.nav.reports },
+		{ href: '/reports/details', label: '明細', icon: icons.nav.details },
+		{ href: '/import', label: '匯入', icon: icons.nav.import },
+		{ href: '/corrections', label: '校正', icon: icons.nav.corrections },
+		{ href: '/import/history', label: '歷程', icon: icons.nav.history },
+		{ href: '/settings/categories', label: '分類', icon: icons.nav.categories }
 	];
 
-	// corporate theme's menu-active bg == navbar neutral bg, so it's invisible here.
-	// Use a visible light pill instead.
 	const activeCls = (href: string) =>
 		$page.url.pathname === href ? 'bg-white/15 font-semibold' : '';
 </script>
@@ -23,14 +23,12 @@
 		<div class="navbar-start">
 			<div class="dropdown">
 				<div tabindex="0" role="button" aria-label="開啟選單" aria-haspopup="menu" class="btn btn-ghost lg:hidden">
-					<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16" />
-					</svg>
+					<Icon icon={icons.menu} class="text-xl" />
 				</div>
 				<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 				<ul tabindex="0" class="menu menu-sm dropdown-content bg-neutral rounded-box z-10 mt-3 w-52 p-2 shadow">
 					{#each links as link}
-						<li><a href={link.href} class={activeCls(link.href)}>{link.label}</a></li>
+						<li><a href={link.href} class="flex items-center gap-2 {activeCls(link.href)}"><Icon icon={link.icon} class="text-lg" />{link.label}</a></li>
 					{/each}
 				</ul>
 			</div>
@@ -39,13 +37,13 @@
 		<div class="navbar-center hidden lg:flex">
 			<ul class="menu menu-horizontal px-1">
 				{#each links as link}
-					<li><a href={link.href} class={activeCls(link.href)}>{link.label}</a></li>
+					<li><a href={link.href} class="flex items-center gap-1 {activeCls(link.href)}"><Icon icon={link.icon} class="text-lg" />{link.label}</a></li>
 				{/each}
 			</ul>
 		</div>
 		<div class="navbar-end gap-1">
 			<AddExpenseModal />
-			<a href="/auth/logout" class="btn btn-ghost btn-sm">登出</a>
+			<a href="/auth/logout" class="btn btn-ghost btn-sm gap-1"><Icon icon={icons.logout} class="text-lg" />登出</a>
 		</div>
 	</div>
 

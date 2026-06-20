@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { Chart, type ActiveElement, type ChartEvent } from 'chart.js/auto';
+	import Icon from '@iconify/svelte';
+	import { icons } from '$lib/icons';
 
 	// --- State ---
 	let loading = $state(true);
@@ -305,7 +307,7 @@
 			<div class="flex items-center gap-2">
 				<div class="badge badge-primary badge-lg gap-2">
 					篩選: {selectedCategory}
-					<button class="cursor-pointer" onclick={clearCategoryFilter}>&times;</button>
+					<button class="cursor-pointer" aria-label="清除篩選" onclick={clearCategoryFilter}><Icon icon={icons.close} class="text-sm" /></button>
 				</div>
 			</div>
 		{/if}

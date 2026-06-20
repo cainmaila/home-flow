@@ -1,4 +1,7 @@
 <script lang="ts">
+	import Icon from '@iconify/svelte';
+	import { icons } from '$lib/icons';
+
 	let open = $state(false);
 	let saving = $state(false);
 	let feedback = $state('');
@@ -28,12 +31,7 @@
 		open = true;
 		feedback = '';
 		loadCategories();
-		// focus after DOM update
 		requestAnimationFrame(() => amountInput?.focus());
-	}
-
-	function closeModal() {
-		open = false;
 	}
 
 	async function submit() {
@@ -67,27 +65,41 @@
 	}
 
 	function onKeydown(e: KeyboardEvent) {
-		if (e.key === 'Escape') closeModal();
+		if (e.key === 'Escape') open = false;
 		if (e.key === 'Enter' && !saving) { e.preventDefault(); submit(); }
 	}
 </script>
 
-<button class="btn btn-ghost btn-sm" onclick={openModal}>+ 記一筆</button>
+<button class="btn btn-ghost btn-sm gap-1" onclick={openModal}>
+	<Icon icon={icons.addCircle} class="text-lg" />
+	<span class="hidden sm:inline">記一筆</span>
+</button>
 
 {#if open}
 	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<!-- svelte-ignore a11y_interactive_supports_focus -->
 	<div class="modal modal-open" role="dialog" onkeydown={onKeydown}>
 		<div class="modal-box w-80">
-			<h3 class="font-bold text-lg mb-4">新增支出</h3>
+			<h3 class="font-bold text-lg mb-4 flex items-center gap-2">
+				<Icon icon={icons.receipt} class="text-primary text-xl" />
+				新增支出
+			</h3>
 
 			<div class="form-control mb-2">
-				<label class="label" for="add-date"><span class="label-text">日期</span></label>
+				<label class="label" for="add-date">
+					<span class="label-text flex items-center gap-1">
+						<Icon icon={icons.calendar} class="text-base opacity-60" />日期
+					</span>
+				</label>
 				<input id="add-date" type="date" class="input input-bordered input-sm" bind:value={expenseDate} />
 			</div>
 
 			<div class="form-control mb-2">
-				<label class="label" for="add-amount"><span class="label-text">金額</span></label>
+				<label class="label" for="add-amount">
+					<span class="label-text flex items-center gap-1">
+						<Icon icon={icons.money} class="text-base opacity-60" />金額
+					</span>
+				</label>
 				<input
 					id="add-amount"
 					type="number"
@@ -101,7 +113,11 @@
 			</div>
 
 			<div class="form-control mb-2">
-				<label class="label" for="add-category"><span class="label-text">分類</span></label>
+				<label class="label" for="add-category">
+					<span class="label-text flex items-center gap-1">
+						<Icon icon={icons.tag} class="text-base opacity-60" />分類
+					</span>
+				</label>
 				<select id="add-category" class="select select-bordered select-sm" bind:value={categoryId}>
 					<option value={null} disabled>選擇分類</option>
 					{#each categories as group}
@@ -117,21 +133,36 @@
 			<div class="form-control mb-4">
 				<label class="label cursor-pointer justify-start gap-2">
 					<input type="checkbox" class="checkbox checkbox-sm" bind:checked={isFixed} />
-					<span class="label-text">固定支出</span>
+					<span class="label-text flex items-center gap-1">
+						<Icon icon={icons.pin} class="text-base opacity-60" />固定支出
+					</span>
 				</label>
 			</div>
 
 			{#if feedback}
-				<p class="text-sm mb-2" class:text-success={feedback.startsWith('✓')} class:text-error={!feedback.startsWith('✓')}>{feedback}</p>
+				<p class="text-sm mb-2 flex items-center gap-1" class:text-success={feedback.startsWith('✓')} class:text-error={!feedback.startsWith('✓')}>
+					{#if feedback.startsWith('✓')}
+						<Icon icon={icons.check} class="text-base" />
+					{:else}
+						<Icon icon={icons.alert} class="text-base" />
+					{/if}
+					{feedback.replace('✓ ', '')}
+				</p>
 			{/if}
 
 			<div class="modal-action">
-				<button class="btn btn-ghost btn-sm" onclick={closeModal}>關閉</button>
-				<button class="btn btn-primary btn-sm" onclick={submit} disabled={saving || !amount || !categoryId}>
-					{saving ? '儲存中…' : '新增'}
+				<button class="btn btn-ghost btn-sm" onclick={() => open = false}>關閉</button>
+				<button class="btn btn-primary btn-sm gap-1" onclick={submit} disabled={saving || !amount || !categoryId}>
+					{#if saving}
+						<span class="loading loading-spinner loading-xs"></span>
+						儲存中…
+					{:else}
+						<Icon icon={icons.save} class="text-base" />
+						新增
+					{/if}
 				</button>
 			</div>
 		</div>
-		<button type="button" class="modal-backdrop" aria-label="關閉" onclick={closeModal}></button>
+		<button type="button" class="modal-backdrop" aria-label="關閉" onclick={() => open = false}></button>
 	</div>
 {/if}
