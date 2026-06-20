@@ -14,6 +14,10 @@
 	let totalExpense = $state(0);
 	let categoryBreakdown: { category: string; parent_category: string; category_id: number | null; parent_id: number | null; total: number; percentage: number }[] = $state([]);
 
+	// Matrix data
+	let matrixMonths: string[] = $state([]);
+	let matrixRows: { big_category: string; totals: Record<string, number>; avg: number; vsAvg: number }[] = $state([]);
+
 	// Trend data
 	let trendMonths: { month: string; total: number }[] = $state([]);
 	let comparison: {
@@ -79,6 +83,42 @@
 			availableMonths = data.availableMonths;
 		} catch {
 			errorMessage = '網路錯誤';
+		}
+	}
+
+	// ponytail: ANOMALY_THRESHOLD=0.3, MATRIX_MONTHS=6 — tune if needed
+	const ANOMALY_THRESHOLD = 0.3;
+	const MATRIX_MONTHS = 6;
+
+	async function loadMatrix() {
+		try {
+			const res = await fetch(`/api/reports/matrix?months=${MATRIX_MONTHS}`);
+			if (!res.ok) return;
+			const { months, data } = (await res.json()) as {
+				months: string[];
+				data: { month: string; big_category: string; total: number }[];
+			};
+			matrixMonths = months;
+
+			const byCategory = new Map<string, Record<string, number>>();
+			for (const d of data) {
+				if (!byCategory.has(d.big_category)) byCategory.set(d.big_category, {});
+				byCategory.get(d.big_category)![d.month] = d.total;
+			}
+
+			const latestMonth = months[months.length - 1];
+			matrixRows = [...byCategory.entries()]
+				.map(([big_category, totals]) => {
+					const vals = months.map((m) => totals[m] ?? 0);
+					const sum = vals.reduce((a, b) => a + b, 0);
+					const avg = months.length > 0 ? Math.round(sum / months.length) : 0;
+					const latest = totals[latestMonth] ?? 0;
+					const vsAvg = avg > 0 ? (latest - avg) / avg : 0;
+					return { big_category, totals, avg, vsAvg };
+				})
+				.sort((a, b) => (b.totals[latestMonth] ?? 0) - (a.totals[latestMonth] ?? 0));
+		} catch {
+			// supplementary
 		}
 	}
 
@@ -252,7 +292,7 @@
 	}
 
 	onMount(async () => {
-		await Promise.all([loadMonthlyReport(), loadTrend()]);
+		await Promise.all([loadMonthlyReport(), loadTrend(), loadMatrix()]);
 		loading = false;
 
 		await tick();
@@ -336,6 +376,57 @@
 				</div>
 			{/if}
 		</div>
+
+		<!-- Matrix: 大分類 × 月份 -->
+		{#if matrixRows.length > 0}
+			<div class="card bg-base-100 shadow">
+				<div class="card-body">
+					<h2 class="card-title text-lg">分類月度矩陣</h2>
+					<div class="overflow-x-auto">
+						<table class="table table-sm">
+							<thead>
+								<tr>
+									<th>大分類</th>
+									{#each matrixMonths as m}
+										<th class="text-right">{m.slice(5)}</th>
+									{/each}
+									<th class="text-right">平均</th>
+									<th class="text-right">vs 平均</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each matrixRows as row}
+									{@const absVs = Math.abs(row.vsAvg)}
+									<tr class="hover">
+										<td class="font-medium">{row.big_category}</td>
+										{#each matrixMonths as m}
+											<td class="text-right tabular-nums">{formatAmount(row.totals[m] ?? 0)}</td>
+										{/each}
+										<td class="text-right tabular-nums text-base-content/60">{formatAmount(row.avg)}</td>
+										<td class="text-right tabular-nums">
+											<span class={row.vsAvg > 0 ? 'text-error font-semibold' : row.vsAvg < 0 ? 'text-success font-semibold' : ''}>
+												{row.vsAvg >= 0 ? '+' : ''}{Math.round(row.vsAvg * 100)}%
+												{#if absVs >= ANOMALY_THRESHOLD}⚠{/if}
+											</span>
+										</td>
+									</tr>
+								{/each}
+							</tbody>
+							<tfoot>
+								<tr class="font-semibold">
+									<td>合計</td>
+									{#each matrixMonths as m}
+										<td class="text-right tabular-nums">{formatAmount(matrixRows.reduce((s, r) => s + (r.totals[m] ?? 0), 0))}</td>
+									{/each}
+									<td class="text-right tabular-nums text-base-content/60">{formatAmount(matrixRows.reduce((s, r) => s + r.avg, 0))}</td>
+									<td></td>
+								</tr>
+							</tfoot>
+						</table>
+					</div>
+				</div>
+			</div>
+		{/if}
 
 		<!-- Category ranking -->
 		{#if categoryBreakdown.length > 0}
