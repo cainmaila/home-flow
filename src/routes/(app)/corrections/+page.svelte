@@ -27,6 +27,7 @@
 		id: string;
 		raw_category: string;
 		suggested_category: string;
+		parent_name: string | null;
 		confidence: number;
 	}[] = $state([]);
 	let aliases: {
@@ -317,7 +318,7 @@
 												onchange={() => toggleSelection(s.id)} />
 										</td>
 										<td>{s.raw_category}</td>
-										<td>{s.suggested_category}</td>
+										<td>{s.parent_name ? `${s.parent_name} > ` : ''}{s.suggested_category}</td>
 										<td class="text-right tabular-nums">{Math.round(s.confidence * 100)}%</td>
 										<td>
 											<button class="btn btn-ghost btn-xs gap-0.5" onclick={() => resolveSuggestion(s.id, 'reject')}>
