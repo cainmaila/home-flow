@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS categories (
 CREATE INDEX IF NOT EXISTS idx_categories_household ON categories(household_id);
 CREATE INDEX IF NOT EXISTS idx_categories_parent ON categories(parent_id);
 
--- Seed: 9 parent categories + 22 child categories for default household.
+-- Seed: 8 parent categories + 21 child categories for default household.
 -- parent_id references are filled in a second pass using subqueries.
 
 -- Parents (sort_order = display order)
@@ -33,8 +33,7 @@ VALUES
   ('default', '育', '教育、學習、書籍、課程', 5),
   ('default', '樂', '休閒娛樂、社交活動', 6),
   ('default', '醫療', '看診、藥品、健康檢查', 7),
-  ('default', '固定支出', '每月固定合約型支出，如保險、貸款、訂閱服務', 8),
-  ('default', '汽車', '車輛相關費用，含油資、保養、停車', 9);
+  ('default', '汽車', '車輛相關費用，含油資、保養、停車', 8);
 
 -- Children: 食
 INSERT OR IGNORE INTO categories (household_id, name, parent_id, sort_order)
@@ -58,7 +57,8 @@ VALUES
   ('default', '日用品', (SELECT id FROM categories WHERE household_id='default' AND name='住' AND parent_id IS NULL), 1),
   ('default', '瓦斯', (SELECT id FROM categories WHERE household_id='default' AND name='住' AND parent_id IS NULL), 2),
   ('default', '水', (SELECT id FROM categories WHERE household_id='default' AND name='住' AND parent_id IS NULL), 3),
-  ('default', '電', (SELECT id FROM categories WHERE household_id='default' AND name='住' AND parent_id IS NULL), 4);
+  ('default', '電', (SELECT id FROM categories WHERE household_id='default' AND name='住' AND parent_id IS NULL), 4),
+  ('default', '貸款', (SELECT id FROM categories WHERE household_id='default' AND name='住' AND parent_id IS NULL), 5);
 
 -- Children: 行
 INSERT OR IGNORE INTO categories (household_id, name, parent_id, sort_order)
@@ -74,19 +74,14 @@ VALUES
 INSERT OR IGNORE INTO categories (household_id, name, parent_id, sort_order)
 VALUES
   ('default', '外出', (SELECT id FROM categories WHERE household_id='default' AND name='樂' AND parent_id IS NULL), 1),
-  ('default', '彩券', (SELECT id FROM categories WHERE household_id='default' AND name='樂' AND parent_id IS NULL), 2);
+  ('default', '彩券', (SELECT id FROM categories WHERE household_id='default' AND name='樂' AND parent_id IS NULL), 2),
+  ('default', '訂閱', (SELECT id FROM categories WHERE household_id='default' AND name='樂' AND parent_id IS NULL), 3);
 
 -- Children: 醫療
 INSERT OR IGNORE INTO categories (household_id, name, parent_id, sort_order)
 VALUES
-  ('default', '醫療', (SELECT id FROM categories WHERE household_id='default' AND name='醫療' AND parent_id IS NULL), 1);
-
--- Children: 固定支出
-INSERT OR IGNORE INTO categories (household_id, name, parent_id, sort_order)
-VALUES
-  ('default', '保險', (SELECT id FROM categories WHERE household_id='default' AND name='固定支出' AND parent_id IS NULL), 1),
-  ('default', '貸款', (SELECT id FROM categories WHERE household_id='default' AND name='固定支出' AND parent_id IS NULL), 2),
-  ('default', '訂閱', (SELECT id FROM categories WHERE household_id='default' AND name='固定支出' AND parent_id IS NULL), 3);
+  ('default', '醫療', (SELECT id FROM categories WHERE household_id='default' AND name='醫療' AND parent_id IS NULL), 1),
+  ('default', '保險', (SELECT id FROM categories WHERE household_id='default' AND name='醫療' AND parent_id IS NULL), 2);
 
 -- Children: 汽車
 INSERT OR IGNORE INTO categories (household_id, name, parent_id, sort_order)
