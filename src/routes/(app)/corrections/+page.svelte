@@ -46,6 +46,7 @@
 	let aiLoading = $state(false);
 	let selectedSuggestions: Set<string> = $state(new Set());
 
+	let aliasModalOpen = $state(false);
 	let newAliasRaw = $state('');
 	let newAliasParentId: number | null = $state(null);
 	let newAliasCategoryId: number | null = $state(null);
@@ -112,6 +113,7 @@
 			newAliasRaw = '';
 			newAliasParentId = null;
 			newAliasCategoryId = null;
+			aliasModalOpen = false;
 			await loadData();
 		} catch {
 			errorMessage = '網路錯誤';
@@ -122,6 +124,7 @@
 		newAliasRaw = rawCategory;
 		newAliasParentId = null;
 		newAliasCategoryId = null;
+		aliasModalOpen = true;
 	}
 
 	async function triggerAISuggestions() {
@@ -216,7 +219,12 @@
 </script>
 
 <div class="space-y-6">
-	<h1 class="text-2xl font-bold">分類校正</h1>
+	<div class="flex items-center justify-between">
+		<h1 class="text-2xl font-bold">分類校正</h1>
+		<button class="btn btn-primary btn-sm gap-1" onclick={() => { newAliasRaw = ''; newAliasParentId = null; newAliasCategoryId = null; aliasModalOpen = true; }}>
+			<Icon icon={icons.addCircle} class="text-base" />新增映射
+		</button>
+	</div>
 
 	{#if loading}
 		<div class="flex justify-center items-center gap-3 py-12 text-base-content/60">
@@ -240,7 +248,7 @@
 						<table class="table table-sm">
 							<thead>
 								<tr>
-									<th>原始分類</th>
+									<th>明細</th>
 									<th class="text-right">筆數</th>
 									<th>操作</th>
 								</tr>
@@ -294,7 +302,7 @@
 											checked={selectedSuggestions.size === aiSuggestions.length && aiSuggestions.length > 0}
 											onchange={toggleAll} />
 									</th>
-									<th>原始分類</th>
+									<th>明細</th>
 									<th>建議分類</th>
 									<th class="text-right">信心</th>
 									<th>操作</th>
@@ -334,43 +342,6 @@
 			</div>
 		</div>
 
-		<!-- New alias form: two-level cascading select -->
-		<div class="card bg-base-100 shadow">
-			<div class="card-body">
-				<h2 class="card-title text-lg">新增分類映射</h2>
-				<div class="flex flex-wrap gap-4 items-end">
-					<label class="form-control w-full max-w-xs">
-						<div class="label"><span class="label-text font-semibold">原始分類</span></div>
-						<input type="text" class="input input-bordered input-sm" bind:value={newAliasRaw} placeholder="例: 消夜/零食" />
-					</label>
-					<label class="form-control w-full max-w-[10rem]">
-						<div class="label"><span class="label-text font-semibold">大類</span></div>
-						<select class="select select-bordered select-sm" bind:value={newAliasParentId} onchange={() => { newAliasCategoryId = null; }}>
-							<option value={null}>-- 選擇 --</option>
-							{#each categories as cat}
-								<option value={cat.id}>{cat.icon ?? ''} {cat.name}</option>
-							{/each}
-						</select>
-					</label>
-					<label class="form-control w-full max-w-[10rem]">
-						<div class="label"><span class="label-text font-semibold">子類</span></div>
-						<select class="select select-bordered select-sm" bind:value={newAliasCategoryId} disabled={!newAliasParentId}>
-							<option value={null}>-- 選擇 --</option>
-							{#each childOptions as child}
-								<option value={child.id}>{child.name}</option>
-							{/each}
-						</select>
-					</label>
-					<button
-						class="btn btn-primary btn-sm gap-1"
-						onclick={() => createAlias(newAliasRaw, newAliasCategoryId)}
-						disabled={!newAliasRaw || !newAliasCategoryId}
-					>
-						<Icon icon={icons.confirm} class="text-base" />確認
-					</button>
-				</div>
-			</div>
-		</div>
 
 		<!-- Existing aliases -->
 		<div class="card bg-base-100 shadow">
@@ -383,7 +354,7 @@
 						<table class="table table-sm">
 							<thead>
 								<tr>
-									<th>原始分類</th>
+									<th>明細</th>
 									<th>分類</th>
 									<th>來源</th>
 									<th>建立時間</th>
@@ -410,3 +381,47 @@
 		</div>
 	{/if}
 </div>
+
+{#if aliasModalOpen}
+	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+	<!-- svelte-ignore a11y_interactive_supports_focus -->
+	<div class="modal modal-open" role="dialog" onkeydown={(e) => { if (e.key === 'Escape') aliasModalOpen = false; }}>
+		<div class="modal-box w-80">
+			<button type="button" class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2" onclick={() => aliasModalOpen = false}>✕</button>
+			<h3 class="font-bold text-lg mb-4">新增分類映射</h3>
+			<div class="form-control mb-3">
+				<div class="label"><span class="label-text font-semibold">明細</span></div>
+				<input type="text" class="input input-bordered input-sm" bind:value={newAliasRaw} placeholder="例: 消夜/零食" />
+			</div>
+			<div class="form-control mb-3">
+				<div class="label"><span class="label-text font-semibold">大類</span></div>
+				<select class="select select-bordered select-sm w-full" bind:value={newAliasParentId} onchange={() => { newAliasCategoryId = null; }}>
+					<option value={null}>-- 選擇 --</option>
+					{#each categories as cat}
+						<option value={cat.id}>{cat.icon ?? ''} {cat.name}</option>
+					{/each}
+				</select>
+			</div>
+			<div class="form-control mb-4">
+				<div class="label"><span class="label-text font-semibold">子類</span></div>
+				<select class="select select-bordered select-sm w-full" bind:value={newAliasCategoryId} disabled={!newAliasParentId}>
+					<option value={null}>-- 選擇 --</option>
+					{#each childOptions as child}
+						<option value={child.id}>{child.name}</option>
+					{/each}
+				</select>
+			</div>
+			<div class="modal-action">
+				<button class="btn btn-ghost btn-sm" onclick={() => aliasModalOpen = false}>取消</button>
+				<button
+					class="btn btn-primary btn-sm gap-1"
+					onclick={() => createAlias(newAliasRaw, newAliasCategoryId)}
+					disabled={!newAliasRaw || !newAliasCategoryId}
+				>
+					<Icon icon={icons.confirm} class="text-base" />確認
+				</button>
+			</div>
+		</div>
+		<button type="button" class="modal-backdrop" aria-label="關閉" onclick={() => aliasModalOpen = false}></button>
+	</div>
+{/if}
