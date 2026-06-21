@@ -9,15 +9,20 @@
 	let filterMonth = $state('');
 	let filterDateFrom = $state('');
 	let filterDateTo = $state('');
-	let filterCategory = $state('');
+	let filterCategoryId = $state<number | null>(null);
+	let filterCategoryName = $state('');
 	let filterFixed = $state(''); // '' | 'true' | 'false'
 	let filterTag = $state('');
+
+	// --- Category picker state ---
+	let categoryPickerOpen = $state(false);
+	let categorySearch = $state('');
+	let pickerInputEl: HTMLInputElement | undefined = $state(undefined);
 
 	let loading = $state(true);
 	let errorMessage = $state('');
 
 	let availableMonths: string[] = $state([]);
-	let availableCategories: string[] = $state([]);
 
 	interface Expense {
 		id: string;
@@ -77,16 +82,35 @@
 		return Math.round(cents).toLocaleString('zh-TW');
 	}
 
+	let selectedCategoryLabel = $derived.by(() => {
+		if (filterCategoryId == null) return '';
+		for (const g of categories) for (const c of g.children) if (c.id === filterCategoryId) return c.name;
+		return filterCategoryName;
+	});
+
+	let selectedCategoryColor = $derived(filterCategoryId != null ? categoryColor.get(filterCategoryId) ?? null : null);
+
+	let filteredPickerGroups = $derived.by(() => {
+		const q = categorySearch.trim().toLowerCase();
+		if (!q) return categories;
+		return categories
+			.map((g) => ({
+				...g,
+				children: g.children.filter((c) => c.name.toLowerCase().includes(q) || g.name.toLowerCase().includes(q))
+			}))
+			.filter((g) => g.children.length > 0);
+	});
+
+	let hasActiveFilters = $derived(
+		!!filterMonth || filterCategoryId != null || !!filterCategoryName || !!filterFixed || !!filterTag || !!filterDateFrom || !!filterDateTo
+	);
+
 	async function loadMeta() {
 		try {
 			const res = await fetch('/api/reports/monthly');
 			if (!res.ok) return;
-			const data = (await res.json()) as {
-				availableMonths?: string[];
-				categoryBreakdown?: { category: string }[];
-			};
+			const data = (await res.json()) as { availableMonths?: string[] };
 			availableMonths = data.availableMonths ?? [];
-			availableCategories = (data.categoryBreakdown ?? []).map((c) => c.category);
 		} catch {
 			// Non-blocking
 		}
@@ -121,7 +145,8 @@
 		if (filterMonth) params.set('month', filterMonth);
 		if (filterDateFrom) params.set('dateFrom', filterDateFrom);
 		if (filterDateTo) params.set('dateTo', filterDateTo);
-		if (filterCategory) params.set('category', filterCategory);
+		if (filterCategoryId != null) params.set('categoryId', String(filterCategoryId));
+		else if (filterCategoryName) params.set('category', filterCategoryName);
 		if (filterFixed) params.set('fixed', filterFixed);
 		if (filterTag) params.set('tags', filterTag);
 
@@ -230,9 +255,24 @@
 		filterMonth = '';
 		filterDateFrom = '';
 		filterDateTo = '';
-		filterCategory = '';
+		filterCategoryId = null;
+		filterCategoryName = '';
 		filterFixed = '';
 		filterTag = '';
+		search();
+	}
+
+	function selectCategory(id: number) {
+		filterCategoryId = id;
+		filterCategoryName = '';
+		categoryPickerOpen = false;
+		categorySearch = '';
+		search();
+	}
+
+	function clearCategory() {
+		filterCategoryId = null;
+		filterCategoryName = '';
 		search();
 	}
 
@@ -307,12 +347,24 @@
 	onMount(async () => {
 		const params = $page.url.searchParams;
 		filterMonth = params.get('month') ?? '';
-		filterCategory = params.get('category') ?? '';
 		filterDateFrom = params.get('dateFrom') ?? '';
 		filterDateTo = params.get('dateTo') ?? '';
 		filterFixed = params.get('fixed') ?? '';
 
 		await Promise.all([loadMeta(), loadCategories(), loadTags()]);
+
+		const urlCategory = params.get('category') ?? '';
+		if (urlCategory) {
+			let found = false;
+			for (const g of categories) {
+				for (const c of g.children) {
+					if (c.name === urlCategory) { filterCategoryId = c.id; found = true; break; }
+				}
+				if (found) break;
+			}
+			if (!found) filterCategoryName = urlCategory;
+		}
+
 		await search();
 	});
 </script>
@@ -326,63 +378,110 @@
 <div class="space-y-6">
 	<h1 class="text-2xl font-bold">支出明細</h1>
 
-	<!-- Filters -->
-	<div class="card bg-base-100 shadow">
-		<div class="card-body">
-			<div class="flex flex-wrap gap-4 items-end">
-				<label class="form-control w-auto">
-					<div class="label"><span class="label-text font-semibold">月份</span></div>
-					<select class="select select-bordered select-sm" bind:value={filterMonth} onchange={() => search()}>
-						<option value="">全部</option>
-						{#each availableMonths as m}
-							<option value={m}>{m}</option>
+	<!-- Filters — compact control row -->
+	<div class="flex flex-wrap gap-2 items-center">
+		<select class="select select-bordered select-sm" bind:value={filterMonth} onchange={() => search()}>
+			<option value="">月份</option>
+			{#each availableMonths as m}
+				<option value={m}>{m}</option>
+			{/each}
+		</select>
+
+		<!-- Category picker trigger -->
+		<div class="relative">
+			<button
+				class="btn btn-sm btn-outline gap-1.5 font-normal"
+				onclick={() => { categoryPickerOpen = !categoryPickerOpen; categorySearch = ''; if (!categoryPickerOpen) return; requestAnimationFrame(() => pickerInputEl?.focus()); }}
+			>
+				{#if selectedCategoryColor}
+					<span class="w-2 h-2 rounded-full inline-block shrink-0" style="background-color:{selectedCategoryColor}"></span>
+				{/if}
+				{selectedCategoryLabel || '分類'}
+				<Icon icon={icons.sortChevron} class="text-xs opacity-50" />
+			</button>
+
+			{#if categoryPickerOpen}
+				<button type="button" class="fixed inset-0 z-10" aria-label="關閉" onclick={() => { categoryPickerOpen = false; categorySearch = ''; }}></button>
+				<div class="absolute left-0 top-full mt-1 z-20 w-64 max-h-72 overflow-y-auto rounded-box bg-base-100 shadow-lg border border-base-300">
+					<div class="sticky top-0 bg-base-100 p-2 border-b border-base-200">
+						<input
+							bind:this={pickerInputEl}
+							bind:value={categorySearch}
+							class="input input-bordered input-sm w-full"
+							placeholder="搜尋分類…"
+							onkeydown={(e) => { if (e.key === 'Escape') { categoryPickerOpen = false; categorySearch = ''; } }}
+						/>
+					</div>
+					{#each filteredPickerGroups as group}
+						<div class="px-3 pt-2 pb-1 text-xs font-semibold text-base-content/50 uppercase tracking-wide">{group.name}</div>
+						{#each group.children as child}
+							<button
+								class="w-full text-left px-3 py-1.5 text-sm flex items-center gap-2 hover:bg-base-200 transition-colors {filterCategoryId === child.id ? 'bg-primary/10 font-semibold' : ''}"
+								onclick={() => selectCategory(child.id)}
+							>
+								<span class="w-2 h-2 rounded-full inline-block shrink-0" style="background-color:{child.color || 'var(--fallback-bc,oklch(0% 0 0/0.15))'}"></span>
+								{child.name}
+							</button>
 						{/each}
-					</select>
-				</label>
-
-				<label class="form-control w-auto">
-					<div class="label"><span class="label-text font-semibold">分類</span></div>
-					<select class="select select-bordered select-sm" bind:value={filterCategory} onchange={() => search()}>
-						<option value="">全部</option>
-						{#each availableCategories as cat}
-							<option value={cat}>{cat}</option>
-						{/each}
-					</select>
-				</label>
-
-				<label class="form-control w-auto">
-					<div class="label"><span class="label-text font-semibold">固定支出</span></div>
-					<select class="select select-bordered select-sm" bind:value={filterFixed} onchange={() => search()}>
-						<option value="">全部</option>
-						<option value="true">固定</option>
-						<option value="false">非固定</option>
-					</select>
-				</label>
-
-				<label class="form-control w-auto">
-					<div class="label"><span class="label-text font-semibold">標籤</span></div>
-					<select class="select select-bordered select-sm" bind:value={filterTag} onchange={() => search()}>
-						<option value="">全部</option>
-						{#each availableTags as tag}
-							<option value={tag.name}>{tag.name}</option>
-						{/each}
-					</select>
-				</label>
-			</div>
-
-			<div class="flex flex-wrap gap-4 items-end mt-2">
-				<label class="form-control w-auto">
-					<div class="label"><span class="label-text font-semibold">日期從</span></div>
-					<input type="date" class="input input-bordered input-sm" bind:value={filterDateFrom} onchange={() => search()} />
-				</label>
-				<label class="form-control w-auto">
-					<div class="label"><span class="label-text font-semibold">日期到</span></div>
-					<input type="date" class="input input-bordered input-sm" bind:value={filterDateTo} onchange={() => search()} />
-				</label>
-				<button class="btn btn-ghost btn-sm gap-1" onclick={clearFilters}><Icon icon={icons.filterRemove} class="text-base" />清除篩選</button>
-			</div>
+					{/each}
+					{#if filteredPickerGroups.length === 0}
+						<div class="px-3 py-4 text-sm text-base-content/40 text-center">找不到符合的分類</div>
+					{/if}
+				</div>
+			{/if}
 		</div>
+
+		<select class="select select-bordered select-sm" bind:value={filterFixed} onchange={() => search()}>
+			<option value="">固定</option>
+			<option value="true">固定</option>
+			<option value="false">非固定</option>
+		</select>
+
+		<select class="select select-bordered select-sm" bind:value={filterTag} onchange={() => search()}>
+			<option value="">標籤</option>
+			{#each availableTags as tag}
+				<option value={tag.name}>{tag.name}</option>
+			{/each}
+		</select>
+
+		<input type="date" class="input input-bordered input-sm" bind:value={filterDateFrom} onchange={() => search()} title="日期從" />
+		<span class="text-base-content/30">–</span>
+		<input type="date" class="input input-bordered input-sm" bind:value={filterDateTo} onchange={() => search()} title="日期到" />
 	</div>
+
+	<!-- Active filter chips -->
+	{#if hasActiveFilters}
+		<div class="flex flex-wrap gap-1.5 items-center">
+			<span class="text-xs text-base-content/50 mr-1">已篩</span>
+			{#if filterMonth}
+				<button class="badge badge-sm gap-1 cursor-pointer hover:badge-error transition-colors" onclick={() => { filterMonth = ''; search(); }}>
+					{filterMonth}<Icon icon={icons.close} class="text-xs" />
+				</button>
+			{/if}
+			{#if filterCategoryId != null || filterCategoryName}
+				<button class="badge badge-sm gap-1 cursor-pointer hover:badge-error transition-colors" onclick={clearCategory}>
+					{#if selectedCategoryColor}<span class="w-1.5 h-1.5 rounded-full inline-block" style="background-color:{selectedCategoryColor}"></span>{/if}
+					{selectedCategoryLabel || filterCategoryName}<Icon icon={icons.close} class="text-xs" />
+				</button>
+			{/if}
+			{#if filterFixed}
+				<button class="badge badge-sm gap-1 cursor-pointer hover:badge-error transition-colors" onclick={() => { filterFixed = ''; search(); }}>
+					{filterFixed === 'true' ? '固定' : '非固定'}<Icon icon={icons.close} class="text-xs" />
+				</button>
+			{/if}
+			{#if filterTag}
+				<button class="badge badge-sm gap-1 cursor-pointer hover:badge-error transition-colors" onclick={() => { filterTag = ''; search(); }}>
+					{filterTag}<Icon icon={icons.close} class="text-xs" />
+				</button>
+			{/if}
+			{#if filterDateFrom || filterDateTo}
+				<button class="badge badge-sm gap-1 cursor-pointer hover:badge-error transition-colors" onclick={() => { filterDateFrom = ''; filterDateTo = ''; search(); }}>
+					{filterDateFrom || '…'}–{filterDateTo || '…'}<Icon icon={icons.close} class="text-xs" />
+				</button>
+			{/if}
+			<button class="text-xs text-base-content/40 hover:text-error transition-colors ml-1" onclick={clearFilters}>清除全部</button>
+		</div>
+	{/if}
 
 	{#if loading}
 		<div class="flex justify-center items-center gap-3 py-12 text-base-content/60">
