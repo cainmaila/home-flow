@@ -31,9 +31,9 @@
 	let aiLoading = $state(false);
 	let selectedSuggestions: Set<string> = $state(new Set());
 
-	let aliasModalOpen = $state(false);
+	let editingRaw: string | null = $state(null);
+	let manualFormOpen = $state(false);
 	let newAliasRaw = $state('');
-	let newAliasCategoryId: number | null = $state(null);
 
 	async function loadData() {
 		loading = true;
@@ -96,9 +96,9 @@
 				if (found) { parentName = g.name; childName = found.name; break; }
 			}
 			successMessage = `已將「${rawCategory}」映射到「${parentName} > ${childName}」`;
+			editingRaw = null;
 			newAliasRaw = '';
-			newAliasCategoryId = null;
-			aliasModalOpen = false;
+			manualFormOpen = false;
 			await loadData();
 		} catch {
 			errorMessage = '網路錯誤';
@@ -106,9 +106,7 @@
 	}
 
 	function handlePendingMap(rawCategory: string) {
-		newAliasRaw = rawCategory;
-		newAliasCategoryId = null;
-		aliasModalOpen = true;
+		editingRaw = rawCategory;
 	}
 
 	async function triggerAISuggestions() {
@@ -205,10 +203,35 @@
 <div class="space-y-6">
 	<div class="flex items-center justify-between">
 		<h1 class="text-2xl font-bold">分類校正</h1>
-		<button class="btn btn-primary btn-sm gap-1" onclick={() => { newAliasRaw = ''; newAliasCategoryId = null; aliasModalOpen = true; }}>
+		<button class="btn btn-primary btn-sm gap-1" onclick={() => { newAliasRaw = ''; manualFormOpen = !manualFormOpen; }}>
 			<Icon icon={icons.addCircle} class="text-base" />新增映射
 		</button>
 	</div>
+
+	{#if manualFormOpen}
+		<div class="card bg-base-100 shadow">
+			<div class="card-body py-4">
+				<div class="flex items-end gap-3 flex-wrap">
+					<div class="form-control">
+						<div class="label pb-1"><span class="label-text font-semibold">明細</span></div>
+						<input type="text" class="input input-bordered input-sm w-60" bind:value={newAliasRaw} placeholder="例: 消夜/零食" />
+					</div>
+					<div class="form-control">
+						<div class="label pb-1"><span class="label-text font-semibold">分類</span></div>
+						<CategoryPicker
+							{categories}
+							selectedId={null}
+							placeholder="選擇分類"
+							size="sm"
+							onselect={(id) => { if (newAliasRaw.trim()) createAlias(newAliasRaw.trim(), id); }}
+							onclear={() => {}}
+						/>
+					</div>
+					<button class="btn btn-ghost btn-sm" onclick={() => { manualFormOpen = false; }}>取消</button>
+				</div>
+			</div>
+		</div>
+	{/if}
 
 	{#if loading}
 		<div class="flex justify-center items-center gap-3 py-12 text-base-content/60">
@@ -243,9 +266,25 @@
 										<td>{item.raw_category}</td>
 										<td class="text-right tabular-nums">{item.count}</td>
 										<td>
-											<button class="btn btn-primary btn-xs gap-0.5" onclick={() => handlePendingMap(item.raw_category)}>
-												<Icon icon={icons.link} class="text-sm" />建立映射
-											</button>
+											{#if editingRaw === item.raw_category}
+												<div class="flex items-center gap-2">
+													<CategoryPicker
+														{categories}
+														selectedId={null}
+														placeholder="選擇分類"
+														size="xs"
+														autoOpen
+														onselect={(id) => createAlias(item.raw_category, id)}
+														onclear={() => {}}
+														onclose={() => { editingRaw = null; }}
+													/>
+													<button class="btn btn-ghost btn-xs" onclick={() => { editingRaw = null; }}>取消</button>
+												</div>
+											{:else}
+												<button class="btn btn-primary btn-xs gap-0.5" onclick={() => handlePendingMap(item.raw_category)}>
+													<Icon icon={icons.link} class="text-sm" />建立映射
+												</button>
+											{/if}
 										</td>
 									</tr>
 								{/each}
@@ -366,39 +405,3 @@
 	{/if}
 </div>
 
-{#if aliasModalOpen}
-	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-	<!-- svelte-ignore a11y_interactive_supports_focus -->
-	<div class="modal modal-open" role="dialog" onkeydown={(e) => { if (e.key === 'Escape') aliasModalOpen = false; }}>
-		<div class="modal-box w-80">
-			<button type="button" class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2" onclick={() => aliasModalOpen = false}>✕</button>
-			<h3 class="font-bold text-lg mb-4">新增分類映射</h3>
-			<div class="form-control mb-3">
-				<div class="label"><span class="label-text font-semibold">明細</span></div>
-				<input type="text" class="input input-bordered input-sm" bind:value={newAliasRaw} placeholder="例: 消夜/零食" />
-			</div>
-			<div class="form-control mb-4">
-				<div class="label"><span class="label-text font-semibold">分類</span></div>
-				<CategoryPicker
-					{categories}
-					selectedId={newAliasCategoryId}
-					placeholder="選擇分類"
-					size="sm"
-					onselect={(id) => { newAliasCategoryId = id; }}
-					onclear={() => { newAliasCategoryId = null; }}
-				/>
-			</div>
-			<div class="modal-action">
-				<button class="btn btn-ghost btn-sm" onclick={() => aliasModalOpen = false}>取消</button>
-				<button
-					class="btn btn-primary btn-sm gap-1"
-					onclick={() => createAlias(newAliasRaw, newAliasCategoryId)}
-					disabled={!newAliasRaw || !newAliasCategoryId}
-				>
-					<Icon icon={icons.confirm} class="text-base" />確認
-				</button>
-			</div>
-		</div>
-		<button type="button" class="modal-backdrop" aria-label="關閉" onclick={() => aliasModalOpen = false}></button>
-	</div>
-{/if}
