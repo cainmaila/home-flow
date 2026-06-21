@@ -20,7 +20,6 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
 		expense_date?: string;
 		amount?: number;
 		category_id?: number | null;
-		is_fixed_expense?: boolean;
 		detail?: string | null;
 		tags?: string[];
 	};
@@ -41,10 +40,6 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
 	if (body.category_id !== undefined) {
 		sets.push('category_id = ?');
 		vals.push(body.category_id);
-	}
-	if (body.is_fixed_expense !== undefined) {
-		sets.push('is_fixed_expense = ?');
-		vals.push(body.is_fixed_expense ? 1 : 0);
 	}
 	if (body.detail !== undefined) {
 		sets.push('detail = ?');

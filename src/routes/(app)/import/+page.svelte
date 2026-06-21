@@ -21,7 +21,7 @@
 	let previewResult: {
 		importId: string;
 		records: {
-			record: { household_id: string; expense_date: string; raw_category: string; normalized_category: string | null; amount: number; is_fixed_expense: boolean; source_import_id: string | null };
+			record: { household_id: string; expense_date: string; raw_category: string; normalized_category: string | null; amount: number; source_import_id: string | null; auto_tags?: string[] };
 			status: 'new' | 'duplicate' | 'update';
 			existingAmount?: number;
 			resolution?: 'use_new' | 'keep_old' | 'skip';

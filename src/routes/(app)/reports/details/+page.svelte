@@ -16,7 +16,6 @@
 	let filterDateTo = $state('');
 	let filterCategoryId = $state<number | null>(null);
 	let filterCategoryName = $state('');
-	let filterFixed = $state('');
 	let filterTag = $state('');
 
 	let loading = $state(true);
@@ -47,7 +46,7 @@
 	let selectedCategoryColor = $derived(filterCategoryId != null ? categoryColor.get(filterCategoryId) ?? null : null);
 
 	let hasActiveFilters = $derived(
-		!!filterMonth || filterCategoryId != null || !!filterCategoryName || !!filterFixed || !!filterTag || !!filterDateFrom || !!filterDateTo
+		!!filterMonth || filterCategoryId != null || !!filterCategoryName || !!filterTag || !!filterDateFrom || !!filterDateTo
 	);
 
 	async function loadMeta() {
@@ -86,7 +85,6 @@
 		if (filterDateTo) params.set('dateTo', filterDateTo);
 		if (filterCategoryId != null) params.set('categoryId', String(filterCategoryId));
 		else if (filterCategoryName) params.set('category', filterCategoryName);
-		if (filterFixed) params.set('fixed', filterFixed);
 		if (filterTag) params.set('tags', filterTag);
 
 		try {
@@ -117,8 +115,7 @@
 						body: JSON.stringify({
 							expense_date: exp.expense_date,
 							amount: exp.amount,
-							category_id: bulkCategoryId,
-							is_fixed_expense: exp.is_fixed_expense
+							category_id: bulkCategoryId
 						})
 					});
 				})
@@ -146,7 +143,7 @@
 	function clearFilters() {
 		filterMonth = ''; filterDateFrom = ''; filterDateTo = '';
 		filterCategoryId = null; filterCategoryName = '';
-		filterFixed = ''; filterTag = '';
+		filterTag = '';
 		search();
 	}
 
@@ -167,8 +164,6 @@
 		filterMonth = params.get('month') ?? '';
 		filterDateFrom = params.get('dateFrom') ?? '';
 		filterDateTo = params.get('dateTo') ?? '';
-		filterFixed = params.get('fixed') ?? '';
-
 		await Promise.all([loadMeta(), loadCategories(), loadTags()]);
 
 		const urlCategory = params.get('category') ?? '';
@@ -206,12 +201,6 @@
 			onclear={clearCategory}
 		/>
 
-		<select class="select select-bordered select-sm" bind:value={filterFixed} onchange={() => search()}>
-			<option value="">固定</option>
-			<option value="true">固定</option>
-			<option value="false">非固定</option>
-		</select>
-
 		<select class="select select-bordered select-sm" bind:value={filterTag} onchange={() => search()}>
 			<option value="">標籤</option>
 			{#each availableTags as tag}
@@ -237,11 +226,6 @@
 				<button class="badge badge-sm gap-1 cursor-pointer hover:badge-error transition-colors" onclick={clearCategory}>
 					{#if selectedCategoryColor}<span class="w-1.5 h-1.5 rounded-full inline-block" style="background-color:{selectedCategoryColor}"></span>{/if}
 					{selectedCategoryLabel || filterCategoryName}<Icon icon={icons.close} class="text-xs" />
-				</button>
-			{/if}
-			{#if filterFixed}
-				<button class="badge badge-sm gap-1 cursor-pointer hover:badge-error transition-colors" onclick={() => { filterFixed = ''; search(); }}>
-					{filterFixed === 'true' ? '固定' : '非固定'}<Icon icon={icons.close} class="text-xs" />
 				</button>
 			{/if}
 			{#if filterTag}

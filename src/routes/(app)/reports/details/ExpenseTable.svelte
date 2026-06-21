@@ -61,7 +61,6 @@
 	let editDate = $state('');
 	let editAmount = $state('');
 	let editCategoryId = $state<number | null>(null);
-	let editFixed = $state(false);
 	let editDetail = $state('');
 	let editTags = $state('');
 
@@ -70,7 +69,6 @@
 		editDate = exp.expense_date;
 		editAmount = String(exp.amount);
 		editCategoryId = exp.category_id ?? null;
-		editFixed = exp.is_fixed_expense;
 		editDetail = exp.detail ?? '';
 		editTags = (exp.tags ?? []).join(',');
 	}
@@ -93,7 +91,6 @@
 					expense_date: editDate,
 					amount: Number(editAmount),
 					category_id: editCategoryId,
-					is_fixed_expense: editFixed,
 					detail: editDetail || null,
 					tags: editTags ? editTags.split(',').map((t: string) => t.trim()).filter(Boolean) : []
 				})
@@ -148,7 +145,6 @@
 								金額 {@render sortIcon('amount')}
 							</th>
 							<th>標籤</th>
-							<th>固定</th>
 							<th class="w-24"></th>
 						</tr>
 					</thead>
@@ -181,9 +177,6 @@
 									<td>
 										<input type="text" class="input input-bordered input-xs w-32" bind:value={editTags} onkeydown={editKeydown} placeholder="逗號分隔" list="tag-options" />
 									</td>
-									<td>
-										<input type="checkbox" class="checkbox checkbox-xs" bind:checked={editFixed} />
-									</td>
 									<td class="flex gap-1">
 										<button class="btn btn-success btn-xs gap-0.5" onclick={saveEdit} disabled={saving}><Icon icon={icons.save} class="text-sm" />儲存</button>
 										<button class="btn btn-ghost btn-xs gap-0.5" onclick={cancelEdit}><Icon icon={icons.cancel} class="text-sm" />取消</button>
@@ -208,7 +201,6 @@
 									<td class="text-sm text-base-content/70">{exp.detail ?? ''}</td>
 									<td class="text-right tabular-nums font-semibold">{formatAmount(exp.amount)}</td>
 									<td class="space-x-1">{#each exp.tags ?? [] as tag}<span class="badge badge-sm badge-ghost rounded-full font-normal">{tag}</span>{/each}</td>
-									<td class="text-center">{#if exp.is_fixed_expense}<Icon icon={icons.pin} class="text-base-content/50 text-sm" aria-label="固定支出" />{/if}</td>
 									<td class="opacity-0 group-hover:opacity-100 transition-opacity">
 										<div class="flex gap-1">
 											<button class="btn btn-ghost btn-xs gap-0.5" onclick={() => startEdit(exp)}><Icon icon={icons.edit} class="text-sm" />編輯</button>
@@ -223,7 +215,7 @@
 						<tr class="font-semibold">
 							<td colspan="4">合計</td>
 							<td class="text-right tabular-nums">{formatAmount(total)}</td>
-							<td colspan="3"></td>
+							<td colspan="2"></td>
 						</tr>
 					</tfoot>
 				</table>

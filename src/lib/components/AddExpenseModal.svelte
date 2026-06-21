@@ -9,7 +9,6 @@
 	let expenseDate = $state(new Date().toISOString().slice(0, 10));
 	let amount = $state('');
 	let categoryId = $state<number | null>(null);
-	let isFixed = $state(false);
 	let detail = $state('');
 	let tagsInput = $state('');
 
@@ -58,7 +57,6 @@
 					expense_date: expenseDate,
 					amount: Number(amount),
 					category_id: categoryId,
-					is_fixed_expense: isFixed,
 					detail: detail || undefined,
 					tags: tagsInput ? tagsInput.split(',').map((t: string) => t.trim()).filter(Boolean) : undefined
 				})
@@ -167,15 +165,6 @@
 						<option value={tag.name}></option>
 					{/each}
 				</datalist>
-			</div>
-
-			<div class="form-control mb-4">
-				<label class="label cursor-pointer justify-start gap-2">
-					<input type="checkbox" class="checkbox checkbox-sm" bind:checked={isFixed} />
-					<span class="label-text flex items-center gap-1">
-						<Icon icon={icons.pin} class="text-base opacity-60" />固定支出
-					</span>
-				</label>
 			</div>
 
 			{#if feedback}

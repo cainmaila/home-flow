@@ -44,7 +44,6 @@ function makeRecord(overrides: Partial<ExpenseRecord> = {}): ExpenseRecord {
 		raw_category: '午餐',
 		normalized_category: null,
 		amount: 200,
-		is_fixed_expense: false,
 		source_import_id: null,
 		...overrides
 	};

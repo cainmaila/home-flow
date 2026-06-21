@@ -270,41 +270,40 @@ describe('T2.4: normalizeRecords', () => {
 			raw_category: '午餐',
 			normalized_category: null,
 			amount: 200,
-			is_fixed_expense: false,
 			source_import_id: null
 		});
 	});
 
-	it('sets is_fixed_expense for 固- prefix', () => {
+	it('sets auto_tags for 固- prefix', () => {
 		const parsed = [
 			{ expense_date: '2026-06-01', raw_category: '固-瓦斯640', amount: 640 },
 			{ expense_date: '2026-06-01', raw_category: '固-網路', amount: 499 }
 		];
 		const records = normalizeRecords(parsed, 'hh-1');
 
-		expect(records[0].is_fixed_expense).toBe(true);
-		expect(records[1].is_fixed_expense).toBe(true);
+		expect(records[0].auto_tags).toEqual(['固定']);
+		expect(records[1].auto_tags).toEqual(['固定']);
 	});
 
-	it('sets is_fixed_expense for known bill categories', () => {
+	it('sets auto_tags for known bill categories', () => {
 		const billCategories = ['瓦斯', '水', '電', '保險', '貸款', '訂閱'];
 		for (const cat of billCategories) {
 			const records = normalizeRecords(
 				[{ expense_date: '2026-01-01', raw_category: cat, amount: 100 }],
 				'hh-1'
 			);
-			expect(records[0].is_fixed_expense).toBe(true);
+			expect(records[0].auto_tags).toEqual(['固定']);
 		}
 	});
 
-	it('does not set is_fixed_expense for regular categories', () => {
+	it('does not set auto_tags for regular categories', () => {
 		const regularCategories = ['午餐', '晚餐', '交通', '醫療', '飲料'];
 		for (const cat of regularCategories) {
 			const records = normalizeRecords(
 				[{ expense_date: '2026-01-01', raw_category: cat, amount: 100 }],
 				'hh-1'
 			);
-			expect(records[0].is_fixed_expense).toBe(false);
+			expect(records[0].auto_tags).toBeUndefined();
 		}
 	});
 
@@ -326,15 +325,15 @@ describe('T2.4: normalizeRecords', () => {
 		// All records should have the household_id
 		expect(records.every((r) => r.household_id === 'test-household')).toBe(true);
 
-		// 固-瓦斯640 should be fixed
+		// 固-瓦斯640 should have auto_tags
 		const gas = records.find((r) => r.raw_category === '固-瓦斯640');
 		expect(gas).toBeDefined();
-		expect(gas!.is_fixed_expense).toBe(true);
+		expect(gas!.auto_tags).toEqual(['固定']);
 
-		// 午餐 should not be fixed
+		// 午餐 should not have auto_tags
 		const lunch = records.find((r) => r.raw_category === '午餐');
 		expect(lunch).toBeDefined();
-		expect(lunch!.is_fixed_expense).toBe(false);
+		expect(lunch!.auto_tags).toBeUndefined();
 	});
 });
 

@@ -45,7 +45,6 @@
 		raw_category: string;
 		normalized_category: string;
 		amount: number;
-		is_fixed_expense: boolean;
 		detail?: string | null;
 		tags?: string[];
 	}[] = $state([]);
@@ -435,7 +434,6 @@
 										<th>明細</th>
 										<th class="text-right">金額</th>
 										<th>標籤</th>
-										<th>固定</th>
 									</tr>
 								</thead>
 								<tbody>
@@ -446,7 +444,6 @@
 											<td class="text-sm text-base-content/70">{exp.detail ?? ''}</td>
 											<td class="text-right tabular-nums">{formatAmount(exp.amount)}</td>
 											<td class="space-x-1">{#each exp.tags ?? [] as tag}<span class="badge badge-sm badge-outline">{tag}</span>{/each}</td>
-											<td>{exp.is_fixed_expense ? '是' : ''}</td>
 										</tr>
 									{/each}
 								</tbody>

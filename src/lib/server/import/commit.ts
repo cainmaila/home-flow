@@ -51,8 +51,8 @@ export async function commitImport(
 			const id = crypto.randomUUID();
 			await db
 				.prepare(
-					`INSERT INTO expenses (id, household_id, expense_date, raw_category, normalized_category, amount, is_fixed_expense, source_import_id, detail)
-					 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+					`INSERT INTO expenses (id, household_id, expense_date, raw_category, normalized_category, amount, source_import_id, detail)
+					 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 				)
 				.bind(
 					id,
@@ -61,11 +61,13 @@ export async function commitImport(
 					pr.record.raw_category,
 					pr.record.normalized_category ?? null,
 					pr.record.amount,
-					pr.record.is_fixed_expense ? 1 : 0,
 					importId,
 					pr.record.raw_category
 				)
 				.run();
+			if (pr.record.auto_tags && pr.record.auto_tags.length > 0) {
+				await setExpenseTags(db, householdId, id, pr.record.auto_tags);
+			}
 			inserted++;
 			continue;
 		}

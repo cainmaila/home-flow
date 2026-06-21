@@ -25,7 +25,6 @@ export interface Expense {
 	category_name?: string;
 	parent_category_name?: string | null;
 	amount: number;
-	is_fixed_expense: boolean;
 	detail?: string | null;
 	tags?: string[];
 }

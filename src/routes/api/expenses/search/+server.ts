@@ -40,9 +40,14 @@ export const GET: RequestHandler = async ({ platform, locals, url }) => {
 		conditions.push('COALESCE(c.name, e.raw_category) = ?');
 		binds.push(category);
 	}
-	if (fixed === 'true' || fixed === 'false') {
-		conditions.push('e.is_fixed_expense = ?');
-		binds.push(fixed === 'true' ? 1 : 0);
+	if (fixed === 'true') {
+		conditions.push(
+			`EXISTS (SELECT 1 FROM expense_tags et2 JOIN tags t2 ON et2.tag_id = t2.id WHERE et2.expense_id = e.id AND t2.name = '固定')`
+		);
+	} else if (fixed === 'false') {
+		conditions.push(
+			`NOT EXISTS (SELECT 1 FROM expense_tags et2 JOIN tags t2 ON et2.tag_id = t2.id WHERE et2.expense_id = e.id AND t2.name = '固定')`
+		);
 	}
 	if (tagsParam) {
 		const tagNames = tagsParam.split(',').map((t) => t.trim()).filter(Boolean);
@@ -69,7 +74,7 @@ export const GET: RequestHandler = async ({ platform, locals, url }) => {
 
 	const rows = await db
 		.prepare(
-			`SELECT e.id, e.expense_date, e.raw_category, e.category_id, e.amount, e.is_fixed_expense,
+			`SELECT e.id, e.expense_date, e.raw_category, e.category_id, e.amount,
 			        e.detail,
 			        COALESCE(c.name, e.raw_category) as category_name,
 			        p.name as parent_category_name,
@@ -87,7 +92,6 @@ export const GET: RequestHandler = async ({ platform, locals, url }) => {
 			raw_category: string;
 			category_id: number | null;
 			amount: number;
-			is_fixed_expense: number;
 			detail: string | null;
 			category_name: string;
 			parent_category_name: string | null;
@@ -103,7 +107,6 @@ export const GET: RequestHandler = async ({ platform, locals, url }) => {
 		parent_category_name: r.parent_category_name,
 		normalized_category: r.category_name,
 		amount: r.amount,
-		is_fixed_expense: r.is_fixed_expense === 1,
 		detail: r.detail,
 		tags: r.tag_names ? r.tag_names.split(',') : []
 	}));

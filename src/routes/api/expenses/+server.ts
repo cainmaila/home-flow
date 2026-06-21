@@ -14,7 +14,6 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 		expense_date: string;
 		amount: number;
 		category_id: number;
-		is_fixed_expense?: boolean;
 		detail?: string;
 		tags?: string[];
 	};
@@ -36,8 +35,8 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 	const detail = body.detail?.trim().slice(0, 200) || null;
 	await db
 		.prepare(
-			`INSERT INTO expenses (id, household_id, expense_date, raw_category, category_id, amount, is_fixed_expense, detail)
-			 VALUES (?, ?, ?, '手動輸入', ?, ?, ?, ?)`
+			`INSERT INTO expenses (id, household_id, expense_date, raw_category, category_id, amount, detail)
+			 VALUES (?, ?, ?, '手動輸入', ?, ?, ?)`
 		)
 		.bind(
 			id,
@@ -45,7 +44,6 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 			body.expense_date,
 			body.category_id,
 			body.amount,
-			body.is_fixed_expense ? 1 : 0,
 			detail
 		)
 		.run();
