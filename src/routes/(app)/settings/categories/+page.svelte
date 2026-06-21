@@ -271,10 +271,10 @@
 					{/if}
 
 					{#if parent.children.length > 0}
-						<div class="ml-6 mt-2 space-y-1">
+						<div class="ml-6 mt-2 flex flex-wrap gap-2 items-start">
 							{#each parent.children as child}
 								{#if editingId === child.id}
-									<div class="space-y-2 py-2 px-2 bg-base-200 rounded">
+									<div class="w-full space-y-2 py-2 px-2 bg-base-200 rounded">
 										<div class="flex flex-wrap gap-2 items-center">
 											<input class="input input-bordered input-xs w-28" class:input-error={editNameInvalid} bind:value={editName} onkeydown={(e) => editKeydown(e, child.id)} />
 											<div class="flex items-center gap-1">
@@ -305,13 +305,17 @@
 										{/if}
 									</div>
 								{:else}
-									<div class="flex items-center gap-2 py-1 px-2 rounded hover:bg-base-200">
+									<div
+									class="group inline-flex items-center gap-1.5 rounded-full py-1 px-3 text-sm border cursor-default transition-colors"
+									class:bg-base-200={!child.color}
+									class:border-base-300={!child.color}
+									style={child.color ? `background-color:${child.color}1a;border-color:${child.color}55` : ''}
+								>
 										{#if child.icon}<CategoryIcon icon={child.icon} />{/if}
-										{#if child.color}<span class="w-2.5 h-2.5 rounded-full inline-block" style="background-color:{child.color}"></span>{/if}
-										<span class="text-sm">{child.name}</span>
-										<div class="ml-auto flex gap-1">
-											<button class="btn btn-ghost btn-xs gap-0.5" onclick={() => startEdit(child, false)}><Icon icon={icons.edit} class="text-sm" />編輯</button>
-											<button class="btn btn-ghost btn-xs gap-0.5 text-error" onclick={() => pendingDelete = { id: child.id, name: child.name, isParent: false }}><Icon icon={icons.delete} class="text-sm" />刪除</button>
+										<span>{child.name}</span>
+										<div class="flex gap-0.5 lg:hidden lg:group-hover:flex">
+											<button class="btn btn-ghost btn-xs btn-circle" onclick={() => startEdit(child, false)}><Icon icon={icons.edit} class="text-sm" /></button>
+											<button class="btn btn-ghost btn-xs btn-circle text-error" onclick={() => pendingDelete = { id: child.id, name: child.name, isParent: false }}><Icon icon={icons.delete} class="text-sm" /></button>
 										</div>
 									</div>
 								{/if}
