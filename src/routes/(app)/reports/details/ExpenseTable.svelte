@@ -5,6 +5,7 @@
 	import type { CategoryParent, Expense } from '$lib/types';
 	import { formatAmount } from '$lib/utils';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
+	import CategoryPicker from '$lib/components/CategoryPicker.svelte';
 
 	let {
 		expenses,
@@ -157,16 +158,15 @@
 										<input type="date" class="input input-bordered input-xs w-36" bind:value={editDate} onkeydown={editKeydown} />
 									</td>
 									<td>
-										<select class="select select-bordered select-xs w-40" bind:value={editCategoryId} onkeydown={editKeydown}>
-											<option value={null}>未分類</option>
-											{#each categories as group}
-												<optgroup label={group.name}>
-													{#each group.children as child}
-														<option value={child.id}>{child.name}</option>
-													{/each}
-												</optgroup>
-											{/each}
-										</select>
+										<CategoryPicker
+											{categories}
+											selectedId={editCategoryId}
+											placeholder="未分類"
+											size="xs"
+											allowClear
+											onselect={(id) => (editCategoryId = id)}
+											onclear={() => (editCategoryId = null)}
+										/>
 									</td>
 									<td>
 										<input type="text" class="input input-bordered input-xs w-32" bind:value={editDetail} onkeydown={editKeydown} placeholder="明細" />
