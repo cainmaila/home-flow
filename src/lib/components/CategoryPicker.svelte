@@ -9,16 +9,20 @@
 		placeholder = '分類',
 		size = 'sm',
 		allowClear = false,
+		autoOpen = false,
 		onselect,
-		onclear
+		onclear,
+		onclose
 	}: {
 		categories: CategoryParent[];
 		selectedId: number | null;
 		placeholder?: string;
 		size?: 'sm' | 'xs';
 		allowClear?: boolean;
+		autoOpen?: boolean;
 		onselect: (id: number) => void;
 		onclear: () => void;
+		onclose?: () => void;
 	} = $props();
 
 	let open = $state(false);
@@ -26,6 +30,7 @@
 	let inputEl: HTMLInputElement | undefined = $state(undefined);
 	let btnEl: HTMLButtonElement | undefined = $state(undefined);
 	let pos = $state({ top: 0, left: 0 });
+	let didAutoOpen = false;
 
 	let selectedLabel = $derived.by(() => {
 		if (selectedId == null) return '';
@@ -50,17 +55,26 @@
 			.filter((g) => g.children.length > 0);
 	});
 
-	function toggle() {
-		open = !open;
+	function openMenu() {
+		open = true;
 		search = '';
-		if (open) {
-			if (btnEl) {
-				const rect = btnEl.getBoundingClientRect();
-				pos = { top: rect.bottom + 4, left: rect.left };
-			}
-			requestAnimationFrame(() => inputEl?.focus());
+		if (btnEl) {
+			const rect = btnEl.getBoundingClientRect();
+			pos = { top: rect.bottom + 4, left: rect.left };
 		}
+		requestAnimationFrame(() => inputEl?.focus());
 	}
+
+	function toggle() {
+		if (open) { close(); } else { openMenu(); }
+	}
+
+	$effect(() => {
+		if (autoOpen && !didAutoOpen && btnEl) {
+			didAutoOpen = true;
+			openMenu();
+		}
+	});
 
 	function select(id: number) {
 		open = false;
@@ -77,6 +91,7 @@
 	function close() {
 		open = false;
 		search = '';
+		onclose?.();
 	}
 </script>
 

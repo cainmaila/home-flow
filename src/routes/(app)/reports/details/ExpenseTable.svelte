@@ -57,50 +57,75 @@
 		else for (const e of sortedExpenses) selected.add(e.id);
 	}
 
-	// --- Edit state ---
-	let editingId = $state<string | null>(null);
-	let editDate = $state('');
-	let editAmount = $state('');
-	let editCategoryId = $state<number | null>(null);
-	let editDetail = $state('');
-	let editTags = $state('');
+	// --- Per-cell edit state ---
+	type EditField = 'date' | 'category' | 'detail' | 'amount' | 'tags';
+	let editing = $state<{ id: string; field: EditField } | null>(null);
+	let editValue = $state('');
 
-	function startEdit(exp: Expense) {
-		editingId = exp.id;
-		editDate = exp.expense_date;
-		editAmount = String(exp.amount);
-		editCategoryId = exp.category_id ?? null;
-		editDetail = exp.detail ?? '';
-		editTags = (exp.tags ?? []).join(',');
+	function startCell(exp: Expense, field: EditField) {
+		if (saving) return;
+		editing = { id: exp.id, field };
+		if (field === 'date') editValue = exp.expense_date;
+		else if (field === 'amount') editValue = String(exp.amount);
+		else if (field === 'detail') editValue = exp.detail ?? '';
+		else if (field === 'tags') editValue = (exp.tags ?? []).join(',');
 	}
 
-	function cancelEdit() { editingId = null; }
+	function cancelCell() { editing = null; }
 
-	function editKeydown(e: KeyboardEvent) {
-		if (e.key === 'Enter') { e.preventDefault(); saveEdit(); }
-		else if (e.key === 'Escape') { e.preventDefault(); cancelEdit(); }
+	function cellKeydown(e: KeyboardEvent, exp: Expense) {
+		if (e.key === 'Enter') { e.preventDefault(); commitCell(exp); }
+		else if (e.key === 'Escape') { e.preventDefault(); cancelCell(); }
 	}
 
-	async function saveEdit() {
-		if (!editingId) return;
+	async function commitCell(exp: Expense) {
+		if (!editing) return;
+		const { field } = editing;
+		let body: Record<string, unknown> | null = null;
+
+		if (field === 'date') {
+			if (editValue && editValue !== exp.expense_date) body = { expense_date: editValue };
+		} else if (field === 'amount') {
+			const n = Number(editValue);
+			if (!isNaN(n) && n >= 0 && n !== exp.amount) body = { amount: n };
+		} else if (field === 'detail') {
+			if (editValue !== (exp.detail ?? '')) body = { detail: editValue || null };
+		} else if (field === 'tags') {
+			const newTags = editValue.split(',').map(t => t.trim()).filter(Boolean);
+			const oldTags = (exp.tags ?? []).join(',');
+			if (newTags.join(',') !== oldTags) body = { tags: newTags };
+		}
+
+		editing = null;
+		if (!body) return;
+
 		saving = true;
 		try {
-			const res = await fetch(`/api/expenses/${editingId}`, {
+			const res = await fetch(`/api/expenses/${exp.id}`, {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					expense_date: editDate,
-					amount: Number(editAmount),
-					category_id: editCategoryId,
-					detail: editDetail || null,
-					tags: editTags ? editTags.split(',').map((t: string) => t.trim()).filter(Boolean) : []
-				})
+				body: JSON.stringify(body)
 			});
 			if (!res.ok) { alert(`儲存失敗: ${await res.text()}`); return; }
-			editingId = null;
 			await onrefresh();
 		} finally { saving = false; }
 	}
+
+	async function commitCategory(expId: string, categoryId: number | null) {
+		editing = null;
+		saving = true;
+		try {
+			const res = await fetch(`/api/expenses/${expId}`, {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ category_id: categoryId })
+			});
+			if (!res.ok) { alert(`儲存失敗: ${await res.text()}`); return; }
+			await onrefresh();
+		} finally { saving = false; }
+	}
+
+	function focusOnMount(node: HTMLElement) { node.focus(); }
 
 	// --- Delete ---
 	let deletingId = $state<string | null>(null);
@@ -151,44 +176,31 @@
 					</thead>
 					<tbody>
 						{#each sortedExpenses as exp}
-							{#if editingId === exp.id}
-								<tr class="bg-base-200 ring-2 ring-primary/40">
-									<td></td>
-									<td>
-										<input type="date" class="input input-bordered input-xs w-36" bind:value={editDate} onkeydown={editKeydown} />
-									</td>
-									<td>
+							<tr class="hover group" class:bg-base-200={selected.has(exp.id)}>
+								<td>
+									<input type="checkbox" class="checkbox checkbox-xs" checked={selected.has(exp.id)} onchange={() => (selected.has(exp.id) ? selected.delete(exp.id) : selected.add(exp.id))} aria-label="選取" />
+								</td>
+								<td class="cursor-pointer" onclick={() => startCell(exp, 'date')}>
+									{#if editing?.id === exp.id && editing.field === 'date'}
+										<input use:focusOnMount type="date" class="input input-bordered input-xs w-36" bind:value={editValue} onkeydown={(e) => cellKeydown(e, exp)} onblur={() => commitCell(exp)} />
+									{:else}
+										<span class="tabular-nums text-base-content/70">{exp.expense_date}</span>
+									{/if}
+								</td>
+								<td class="cursor-pointer" onclick={() => { if (editing?.id !== exp.id || editing.field !== 'category') startCell(exp, 'category'); }}>
+									{#if editing?.id === exp.id && editing.field === 'category'}
 										<CategoryPicker
 											{categories}
-											selectedId={editCategoryId}
+											selectedId={exp.category_id ?? null}
 											placeholder="未分類"
 											size="xs"
 											allowClear
-											onselect={(id) => (editCategoryId = id)}
-											onclear={() => (editCategoryId = null)}
+											autoOpen
+											onselect={(id) => commitCategory(exp.id, id)}
+											onclear={() => commitCategory(exp.id, null)}
+											onclose={cancelCell}
 										/>
-									</td>
-									<td>
-										<input type="text" class="input input-bordered input-xs w-32" bind:value={editDetail} onkeydown={editKeydown} placeholder="明細" />
-									</td>
-									<td>
-										<input type="number" class="input input-bordered input-xs w-24 text-right" bind:value={editAmount} onkeydown={editKeydown} />
-									</td>
-									<td>
-										<input type="text" class="input input-bordered input-xs w-32" bind:value={editTags} onkeydown={editKeydown} placeholder="逗號分隔" list="tag-options" />
-									</td>
-									<td class="flex gap-1">
-										<button class="btn btn-success btn-xs gap-0.5" onclick={saveEdit} disabled={saving}><Icon icon={icons.save} class="text-sm" />儲存</button>
-										<button class="btn btn-ghost btn-xs gap-0.5" onclick={cancelEdit}><Icon icon={icons.cancel} class="text-sm" />取消</button>
-									</td>
-								</tr>
-							{:else}
-								<tr class="hover group" class:bg-base-200={selected.has(exp.id)}>
-									<td>
-										<input type="checkbox" class="checkbox checkbox-xs" checked={selected.has(exp.id)} onchange={() => (selected.has(exp.id) ? selected.delete(exp.id) : selected.add(exp.id))} aria-label="選取" />
-									</td>
-									<td class="tabular-nums text-base-content/70">{exp.expense_date}</td>
-									<td>
+									{:else}
 										<span class="inline-flex items-center gap-1.5">
 											{#if exp.category_id != null && categoryColor.get(exp.category_id)}
 												<span class="w-2 h-2 rounded-full inline-block shrink-0" style="background-color:{categoryColor.get(exp.category_id)}"></span>
@@ -197,18 +209,33 @@
 											{/if}
 											<span>{#if exp.parent_category_name}<span class="text-base-content/45">{exp.parent_category_name} ›</span> {/if}{exp.normalized_category}</span>
 										</span>
-									</td>
-									<td class="text-sm text-base-content/70">{exp.detail ?? ''}</td>
-									<td class="text-right tabular-nums font-semibold">{formatAmount(exp.amount)}</td>
-									<td class="space-x-1">{#each exp.tags ?? [] as tag}<span class="badge badge-sm badge-ghost rounded-full font-normal">{tag}</span>{/each}</td>
-									<td class="opacity-0 group-hover:opacity-100 transition-opacity">
-										<div class="flex gap-1">
-											<button class="btn btn-ghost btn-xs gap-0.5" onclick={() => startEdit(exp)}><Icon icon={icons.edit} class="text-sm" />編輯</button>
-											<button class="btn btn-ghost btn-xs gap-0.5 text-error" onclick={() => confirmDelete(exp.id)}><Icon icon={icons.delete} class="text-sm" />刪除</button>
-										</div>
-									</td>
-								</tr>
-							{/if}
+									{/if}
+								</td>
+								<td class="cursor-pointer" onclick={() => startCell(exp, 'detail')}>
+									{#if editing?.id === exp.id && editing.field === 'detail'}
+										<input use:focusOnMount type="text" class="input input-bordered input-xs w-32" bind:value={editValue} onkeydown={(e) => cellKeydown(e, exp)} onblur={() => commitCell(exp)} placeholder="明細" />
+									{:else}
+										<span class="text-sm text-base-content/70">{exp.detail ?? ''}</span>
+									{/if}
+								</td>
+								<td class="cursor-pointer" onclick={() => startCell(exp, 'amount')}>
+									{#if editing?.id === exp.id && editing.field === 'amount'}
+										<input use:focusOnMount type="number" class="input input-bordered input-xs w-24 text-right" bind:value={editValue} onkeydown={(e) => cellKeydown(e, exp)} onblur={() => commitCell(exp)} />
+									{:else}
+										<span class="text-right tabular-nums font-semibold">{formatAmount(exp.amount)}</span>
+									{/if}
+								</td>
+								<td class="cursor-pointer" onclick={() => startCell(exp, 'tags')}>
+									{#if editing?.id === exp.id && editing.field === 'tags'}
+										<input use:focusOnMount type="text" class="input input-bordered input-xs w-32" bind:value={editValue} onkeydown={(e) => cellKeydown(e, exp)} onblur={() => commitCell(exp)} placeholder="逗號分隔" list="tag-options" />
+									{:else}
+										<span class="space-x-1">{#each exp.tags ?? [] as tag}<span class="badge badge-sm badge-ghost rounded-full font-normal">{tag}</span>{/each}</span>
+									{/if}
+								</td>
+								<td class="opacity-0 group-hover:opacity-100 transition-opacity">
+									<button class="btn btn-ghost btn-xs gap-0.5 text-error" onclick={() => confirmDelete(exp.id)}><Icon icon={icons.delete} class="text-sm" />刪除</button>
+								</td>
+							</tr>
 						{/each}
 					</tbody>
 					<tfoot>
