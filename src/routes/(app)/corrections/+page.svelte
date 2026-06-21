@@ -1,7 +1,8 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
 	import { icons } from '$lib/icons';
-	import type { CategoryChild, CategoryParent } from '$lib/types';
+	import CategoryPicker from '$lib/components/CategoryPicker.svelte';
+	import type { CategoryParent } from '$lib/types';
 	import { HOUSEHOLD_ID } from '$lib/utils';
 
 	let categories: CategoryParent[] = $state([]);
@@ -32,11 +33,7 @@
 
 	let aliasModalOpen = $state(false);
 	let newAliasRaw = $state('');
-	let newAliasParentId: number | null = $state(null);
 	let newAliasCategoryId: number | null = $state(null);
-
-	let selectedParent = $derived(categories.find((c) => c.id === newAliasParentId));
-	let childOptions = $derived(selectedParent?.children ?? []);
 
 	async function loadData() {
 		loading = true;
@@ -92,10 +89,14 @@
 				return;
 			}
 
-			const cat = childOptions.find((c) => c.id === categoryId);
-			successMessage = `已將「${rawCategory}」映射到「${selectedParent?.name} > ${cat?.name}」`;
+			let parentName = '';
+			let childName = '';
+			for (const g of categories) {
+				const found = g.children.find((c) => c.id === categoryId);
+				if (found) { parentName = g.name; childName = found.name; break; }
+			}
+			successMessage = `已將「${rawCategory}」映射到「${parentName} > ${childName}」`;
 			newAliasRaw = '';
-			newAliasParentId = null;
 			newAliasCategoryId = null;
 			aliasModalOpen = false;
 			await loadData();
@@ -106,7 +107,6 @@
 
 	function handlePendingMap(rawCategory: string) {
 		newAliasRaw = rawCategory;
-		newAliasParentId = null;
 		newAliasCategoryId = null;
 		aliasModalOpen = true;
 	}
@@ -205,7 +205,7 @@
 <div class="space-y-6">
 	<div class="flex items-center justify-between">
 		<h1 class="text-2xl font-bold">分類校正</h1>
-		<button class="btn btn-primary btn-sm gap-1" onclick={() => { newAliasRaw = ''; newAliasParentId = null; newAliasCategoryId = null; aliasModalOpen = true; }}>
+		<button class="btn btn-primary btn-sm gap-1" onclick={() => { newAliasRaw = ''; newAliasCategoryId = null; aliasModalOpen = true; }}>
 			<Icon icon={icons.addCircle} class="text-base" />新增映射
 		</button>
 	</div>
@@ -377,23 +377,16 @@
 				<div class="label"><span class="label-text font-semibold">明細</span></div>
 				<input type="text" class="input input-bordered input-sm" bind:value={newAliasRaw} placeholder="例: 消夜/零食" />
 			</div>
-			<div class="form-control mb-3">
-				<div class="label"><span class="label-text font-semibold">大類</span></div>
-				<select class="select select-bordered select-sm w-full" bind:value={newAliasParentId} onchange={() => { newAliasCategoryId = null; }}>
-					<option value={null}>-- 選擇 --</option>
-					{#each categories as cat}
-						<option value={cat.id}>{cat.icon ?? ''} {cat.name}</option>
-					{/each}
-				</select>
-			</div>
 			<div class="form-control mb-4">
-				<div class="label"><span class="label-text font-semibold">子類</span></div>
-				<select class="select select-bordered select-sm w-full" bind:value={newAliasCategoryId} disabled={!newAliasParentId}>
-					<option value={null}>-- 選擇 --</option>
-					{#each childOptions as child}
-						<option value={child.id}>{child.name}</option>
-					{/each}
-				</select>
+				<div class="label"><span class="label-text font-semibold">分類</span></div>
+				<CategoryPicker
+					{categories}
+					selectedId={newAliasCategoryId}
+					placeholder="選擇分類"
+					size="sm"
+					onselect={(id) => { newAliasCategoryId = id; }}
+					onclear={() => { newAliasCategoryId = null; }}
+				/>
 			</div>
 			<div class="modal-action">
 				<button class="btn btn-ghost btn-sm" onclick={() => aliasModalOpen = false}>取消</button>
