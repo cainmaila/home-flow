@@ -51,9 +51,16 @@
 	let saving = $state(false);
 
 	// --- Categories for edit dropdown ---
-	interface CategoryChild { id: number; name: string }
+	interface CategoryChild { id: number; name: string; color?: string | null }
 	interface CategoryGroup { id: number; name: string; children: CategoryChild[] }
 	let categories: CategoryGroup[] = $state([]);
+
+	// category_id → color, built from the loaded category tree (API carries color per child)
+	let categoryColor = $derived.by(() => {
+		const m = new Map<number, string>();
+		for (const g of categories) for (const c of g.children) if (c.color) m.set(c.id, c.color);
+		return m;
+	});
 
 	// --- Tags for filter + datalist ---
 	let availableTags: { id: number; name: string }[] = $state([]);
@@ -474,12 +481,21 @@
 											<td>
 												<input type="checkbox" class="checkbox checkbox-xs" checked={selected.has(exp.id)} onchange={() => (selected.has(exp.id) ? selected.delete(exp.id) : selected.add(exp.id))} aria-label="選取" />
 											</td>
-											<td>{exp.expense_date}</td>
-											<td>{exp.parent_category_name ? `${exp.parent_category_name} > ` : ''}{exp.normalized_category}</td>
+											<td class="tabular-nums text-base-content/70">{exp.expense_date}</td>
+											<td>
+												<span class="inline-flex items-center gap-1.5">
+													{#if exp.category_id != null && categoryColor.get(exp.category_id)}
+														<span class="w-2 h-2 rounded-full inline-block shrink-0" style="background-color:{categoryColor.get(exp.category_id)}"></span>
+													{:else}
+														<span class="w-2 h-2 rounded-full inline-block shrink-0 bg-base-content/20"></span>
+													{/if}
+													<span>{#if exp.parent_category_name}<span class="text-base-content/45">{exp.parent_category_name} ›</span> {/if}{exp.normalized_category}</span>
+												</span>
+											</td>
 											<td class="text-sm text-base-content/70">{exp.detail ?? ''}</td>
-											<td class="text-right tabular-nums">{formatAmount(exp.amount)}</td>
-											<td class="space-x-1">{#each exp.tags ?? [] as tag}<span class="badge badge-sm badge-outline">{tag}</span>{/each}</td>
-											<td>{exp.is_fixed_expense ? '是' : ''}</td>
+											<td class="text-right tabular-nums font-semibold">{formatAmount(exp.amount)}</td>
+											<td class="space-x-1">{#each exp.tags ?? [] as tag}<span class="badge badge-sm badge-ghost rounded-full font-normal">{tag}</span>{/each}</td>
+											<td class="text-center">{#if exp.is_fixed_expense}<Icon icon={icons.pin} class="text-base-content/50 text-sm" aria-label="固定支出" />{/if}</td>
 											<td class="opacity-0 group-hover:opacity-100 transition-opacity">
 												<div class="flex gap-1">
 													<button class="btn btn-ghost btn-xs gap-0.5" onclick={() => startEdit(exp)}><Icon icon={icons.edit} class="text-sm" />編輯</button>
