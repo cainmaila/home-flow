@@ -13,7 +13,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 	const body = (await request.json()) as {
 		expense_date: string;
 		amount: number;
-		category_id: number;
+		category_id?: number | null;
 		detail?: string;
 		tags?: string[];
 	};
@@ -22,14 +22,14 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 		throw error(400, 'Invalid date format');
 	if (typeof body.amount !== 'number' || body.amount <= 0)
 		throw error(400, 'Invalid amount');
-	if (typeof body.category_id !== 'number')
-		throw error(400, 'Category required');
-
-	const cat = await db
-		.prepare('SELECT id FROM categories WHERE id = ? AND household_id = ? AND is_deleted = 0')
-		.bind(body.category_id, HOUSEHOLD_ID)
-		.first();
-	if (!cat) throw error(400, 'Invalid category');
+	if (body.category_id != null) {
+		if (typeof body.category_id !== 'number') throw error(400, 'Invalid category_id');
+		const cat = await db
+			.prepare('SELECT id FROM categories WHERE id = ? AND household_id = ? AND is_deleted = 0')
+			.bind(body.category_id, HOUSEHOLD_ID)
+			.first();
+		if (!cat) throw error(400, 'Invalid category');
+	}
 
 	const id = crypto.randomUUID();
 	const detail = body.detail?.trim().slice(0, 200) || null;
@@ -42,7 +42,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 			id,
 			HOUSEHOLD_ID,
 			body.expense_date,
-			body.category_id,
+			body.category_id ?? null,
 			body.amount,
 			detail
 		)

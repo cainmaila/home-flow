@@ -9,6 +9,7 @@
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 	import CategoryPicker from '$lib/components/CategoryPicker.svelte';
 	import ExpenseTable from './ExpenseTable.svelte';
+	import QuickAddRow from './QuickAddRow.svelte';
 
 	// --- Filter state ---
 	let filterMonth = $state('');
@@ -272,6 +273,8 @@
 	{:else if errorMessage}
 		<div class="alert alert-error">{errorMessage}</div>
 	{:else}
+		<QuickAddRow onadded={search} />
+
 		<div class="flex items-center justify-between">
 			<span class="text-sm text-base-content/70">共 {count} 筆，合計 <strong class="tabular-nums">{formatAmount(total)}</strong></span>
 			<button class="btn btn-sm btn-outline gap-1" onclick={exportCsv} disabled={count === 0}>

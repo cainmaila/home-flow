@@ -207,7 +207,11 @@
 											{:else}
 												<span class="w-2 h-2 rounded-full inline-block shrink-0 bg-base-content/20"></span>
 											{/if}
-											<span>{#if exp.parent_category_name}<span class="text-base-content/45">{exp.parent_category_name} ›</span> {/if}{exp.normalized_category}</span>
+											{#if exp.category_id == null}
+						<span class="text-base-content/40">未分類</span>
+					{:else}
+						<span>{#if exp.parent_category_name}<span class="text-base-content/45">{exp.parent_category_name} ›</span> {/if}{exp.normalized_category}</span>
+					{/if}
 										</span>
 									{/if}
 								</td>
