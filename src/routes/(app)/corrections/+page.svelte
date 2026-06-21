@@ -1,25 +1,8 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
 	import { icons } from '$lib/icons';
-	const HOUSEHOLD_ID = 'default';
-
-	interface CategoryChild {
-		id: number;
-		name: string;
-		icon: string | null;
-		color: string | null;
-		sort_order: number;
-	}
-
-	interface CategoryParent {
-		id: number;
-		name: string;
-		description: string | null;
-		icon: string | null;
-		color: string | null;
-		sort_order: number;
-		children: CategoryChild[];
-	}
+	import type { CategoryChild, CategoryParent } from '$lib/types';
+	import { HOUSEHOLD_ID } from '$lib/utils';
 
 	let categories: CategoryParent[] = $state([]);
 	let pending: { raw_category: string; count: number }[] = $state([]);

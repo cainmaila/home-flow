@@ -1,26 +1,11 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
-	import { icons, CATEGORY_ICONS } from '$lib/icons';
+	import { icons } from '$lib/icons';
 	import CategoryIcon from '$lib/components/CategoryIcon.svelte';
-	const HOUSEHOLD_ID = 'default';
-
-	interface CategoryChild {
-		id: number;
-		name: string;
-		icon: string | null;
-		color: string | null;
-		sort_order: number;
-	}
-
-	interface CategoryParent {
-		id: number;
-		name: string;
-		description: string | null;
-		icon: string | null;
-		color: string | null;
-		sort_order: number;
-		children: CategoryChild[];
-	}
+	import IconPicker from '$lib/components/IconPicker.svelte';
+	import type { CategoryChild, CategoryParent } from '$lib/types';
+	import { HOUSEHOLD_ID } from '$lib/utils';
+	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 
 	let categories: CategoryParent[] = $state([]);
 	let loading = $state(true);
@@ -245,15 +230,7 @@
 								</div>
 							</div>
 							{#if showEditIconPicker}
-								<div class="flex flex-wrap gap-1 p-2 bg-base-200 rounded-lg max-w-sm">
-									{#each CATEGORY_ICONS as icon}
-										<button
-											class="btn btn-ghost btn-sm text-lg px-1.5"
-											class:btn-active={editIcon === icon}
-											onclick={() => { editIcon = icon; showEditIconPicker = false; }}
-										><Icon {icon} /></button>
-									{/each}
-								</div>
+								<IconPicker selected={editIcon} onselect={(icon) => { editIcon = icon; showEditIconPicker = false; }} />
 							{/if}
 						</div>
 					{:else}
@@ -293,15 +270,7 @@
 											<button class="btn btn-ghost btn-xs gap-0.5" onclick={() => { editingId = null; showEditIconPicker = false; }}><Icon icon={icons.cancel} class="text-sm" />取消</button>
 										</div>
 										{#if showEditIconPicker}
-											<div class="flex flex-wrap gap-1 p-2 bg-base-100 rounded-lg max-w-xs">
-												{#each CATEGORY_ICONS as icon}
-													<button
-														class="btn btn-ghost btn-xs text-base px-1"
-														class:btn-active={editIcon === icon}
-														onclick={() => { editIcon = icon; showEditIconPicker = false; }}
-													><Icon {icon} /></button>
-												{/each}
-											</div>
+											<IconPicker selected={editIcon} size="xs" onselect={(icon) => { editIcon = icon; showEditIconPicker = false; }} />
 										{/if}
 									</div>
 								{:else}
@@ -365,14 +334,8 @@
 					{/if}
 				</div>
 				{#if showIconPicker}
-					<div class="flex flex-wrap gap-1 p-2 mt-2 bg-base-200 rounded-lg">
-						{#each CATEGORY_ICONS as icon}
-							<button
-								class="btn btn-ghost btn-sm text-lg px-1.5"
-								class:btn-active={modalIcon === icon}
-								onclick={() => { modalIcon = icon; showIconPicker = false; }}
-							><Icon {icon} /></button>
-						{/each}
+					<div class="mt-2">
+						<IconPicker selected={modalIcon} onselect={(icon) => { modalIcon = icon; showIconPicker = false; }} />
 					</div>
 				{/if}
 			</div>
@@ -400,20 +363,12 @@
 	<form method="dialog" class="modal-backdrop"><button>close</button></form>
 </dialog>
 
-<!-- Delete confirm modal -->
-{#if pendingDelete}
-	<div class="modal modal-open">
-		<div class="modal-box">
-			<h3 class="font-bold text-lg">確認刪除</h3>
-			<p class="py-4">
-				確定要刪除「<strong>{pendingDelete.name}</strong>」嗎？
-				{#if pendingDelete.isParent}其子分類會一併刪除，{/if}相關費用會變成未分類。此操作無法復原。
-			</p>
-			<div class="modal-action">
-				<button class="btn btn-ghost gap-1" onclick={() => (pendingDelete = null)}><Icon icon={icons.cancel} class="text-base" />取消</button>
-				<button class="btn btn-error gap-1" onclick={confirmDelete} disabled={deleting}><Icon icon={icons.delete} class="text-base" />刪除</button>
-			</div>
-		</div>
-		<button type="button" class="modal-backdrop" aria-label="關閉" onclick={() => (pendingDelete = null)}></button>
-	</div>
-{/if}
+<ConfirmModal
+	open={!!pendingDelete}
+	title="確認刪除"
+	message={pendingDelete ? `確定要刪除「<strong>${pendingDelete.name}</strong>」嗎？${pendingDelete.isParent ? '其子分類會一併刪除，' : ''}相關費用會變成未分類。此操作無法復原。` : ''}
+	confirmLabel="刪除"
+	loading={deleting}
+	onconfirm={confirmDelete}
+	oncancel={() => (pendingDelete = null)}
+/>

@@ -1,9 +1,9 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
 	import { icons } from '$lib/icons';
+	import { HOUSEHOLD_ID } from '$lib/utils';
 	const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 	const currentYear = new Date().getFullYear();
-	const HOUSEHOLD_ID = 'default';
 
 	let fileInput: HTMLInputElement | undefined = $state();
 	let year: number = $state(currentYear);
