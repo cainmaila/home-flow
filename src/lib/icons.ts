@@ -7,6 +7,7 @@ export const icons = {
 	add: 'mdi:plus',
 	addCircle: 'mdi:plus-circle-outline',
 	upload: 'mdi:cloud-upload-outline',
+	download: 'mdi:download-outline',
 	confirm: 'mdi:check-circle-outline',
 	back: 'mdi:arrow-left',
 	logout: 'mdi:logout',

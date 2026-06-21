@@ -140,6 +140,29 @@
 		} finally { saving = false; }
 	}
 
+	function exportCsv() {
+		const esc = (v: string) => (/[,"\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+		const header = '日期,父分類,分類,明細,金額,標籤';
+		const rows = expenses.map((e) =>
+			[
+				e.expense_date,
+				esc(e.parent_category_name ?? ''),
+				esc(e.normalized_category),
+				esc(e.detail ?? ''),
+				String(e.amount),
+				esc((e.tags ?? []).join('、'))
+			].join(',')
+		);
+		const csv = '﻿' + header + '\n' + rows.join('\n');
+		const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = `支出明細_${new Date().toISOString().slice(0, 10)}.csv`;
+		a.click();
+		URL.revokeObjectURL(url);
+	}
+
 	function clearFilters() {
 		filterMonth = ''; filterDateFrom = ''; filterDateTo = '';
 		filterCategoryId = null; filterCategoryName = '';
@@ -249,8 +272,11 @@
 	{:else if errorMessage}
 		<div class="alert alert-error">{errorMessage}</div>
 	{:else}
-		<div class="text-sm text-base-content/70">
-			共 {count} 筆，合計 <strong class="tabular-nums">{formatAmount(total)}</strong>
+		<div class="flex items-center justify-between">
+			<span class="text-sm text-base-content/70">共 {count} 筆，合計 <strong class="tabular-nums">{formatAmount(total)}</strong></span>
+			<button class="btn btn-sm btn-outline gap-1" onclick={exportCsv} disabled={count === 0}>
+				<Icon icon={icons.download} class="text-base" />匯出 CSV
+			</button>
 		</div>
 
 		{#if selected.size > 0}
