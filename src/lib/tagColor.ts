@@ -2,7 +2,7 @@ export type TagColor = 'orange' | 'green' | 'teal' | 'gray' | 'purple' | 'red' |
 const TAG_COLORS: TagColor[] = ['orange', 'green', 'teal', 'gray', 'purple', 'red', 'blue'];
 
 const OVERRIDE: Record<string, TagColor> = {
-	'現金': 'teal'
+	'現金': 'gray'
 };
 
 export function tagColor(name: string): TagColor {
