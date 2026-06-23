@@ -16,6 +16,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 		category_id?: number | null;
 		detail?: string;
 		tags?: string[];
+		payment_method?: string;
 	};
 
 	if (!body.expense_date || !/^\d{4}-\d{2}-\d{2}$/.test(body.expense_date))
@@ -33,10 +34,11 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 
 	const id = crypto.randomUUID();
 	const detail = body.detail?.trim().slice(0, 200) || null;
+	const paymentMethod = body.payment_method?.trim().slice(0, 20) || '現金';
 	await db
 		.prepare(
-			`INSERT INTO expenses (id, household_id, expense_date, raw_category, category_id, amount, detail)
-			 VALUES (?, ?, ?, '手動輸入', ?, ?, ?)`
+			`INSERT INTO expenses (id, household_id, expense_date, raw_category, category_id, amount, detail, payment_method)
+			 VALUES (?, ?, ?, '手動輸入', ?, ?, ?, ?)`
 		)
 		.bind(
 			id,
@@ -44,7 +46,8 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 			body.expense_date,
 			body.category_id ?? null,
 			body.amount,
-			detail
+			detail,
+			paymentMethod
 		)
 		.run();
 

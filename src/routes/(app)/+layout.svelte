@@ -11,7 +11,8 @@
 		{ href: '/import', label: '匯入', icon: icons.nav.import },
 		{ href: '/corrections', label: '校正', icon: icons.nav.corrections },
 		{ href: '/import/history', label: '歷程', icon: icons.nav.history },
-		{ href: '/settings/categories', label: '分類', icon: icons.nav.categories }
+		{ href: '/settings/categories', label: '分類', icon: icons.nav.categories },
+		{ href: '/settings/payments', label: '付款', icon: icons.nav.payments }
 	];
 
 	const activeCls = (href: string) =>

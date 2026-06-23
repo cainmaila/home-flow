@@ -27,4 +27,5 @@ export interface Expense {
 	amount: number;
 	detail?: string | null;
 	tags?: string[];
+	payment_method?: string;
 }

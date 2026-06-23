@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
 	import { icons } from '$lib/icons';
+	import PaymentMethodPicker from '$lib/components/PaymentMethodPicker.svelte';
 
 	let open = $state(false);
 	let saving = $state(false);
@@ -11,6 +12,7 @@
 	let categoryId = $state<number | null>(null);
 	let detail = $state('');
 	let tagsInput = $state('');
+	let paymentMethod = $state('現金');
 
 	interface CategoryChild { id: number; name: string }
 	interface CategoryGroup { id: number; name: string; children: CategoryChild[] }
@@ -18,6 +20,7 @@
 	let categoriesLoaded = false;
 
 	let availableTags: { id: number; name: string }[] = $state([]);
+	let paymentMethods: { id: number; name: string }[] = $state([]);
 
 	let amountInput: HTMLInputElement | undefined = $state();
 
@@ -37,11 +40,19 @@
 		} catch { /* non-blocking */ }
 	}
 
+	async function loadPaymentMethods() {
+		try {
+			const res = await fetch('/api/payment-methods');
+			if (res.ok) paymentMethods = await res.json();
+		} catch { /* non-blocking */ }
+	}
+
 	function openModal() {
 		open = true;
 		feedback = '';
 		loadCategories();
 		loadTagsList();
+		loadPaymentMethods();
 		requestAnimationFrame(() => amountInput?.focus());
 	}
 
@@ -58,7 +69,8 @@
 					amount: Number(amount),
 					category_id: categoryId,
 					detail: detail || undefined,
-					tags: tagsInput ? tagsInput.split(',').map((t: string) => t.trim()).filter(Boolean) : undefined
+					tags: tagsInput ? tagsInput.split(',').map((t: string) => t.trim()).filter(Boolean) : undefined,
+					payment_method: paymentMethod
 				})
 			});
 			if (!res.ok) {
@@ -70,6 +82,7 @@
 			amount = '';
 			detail = '';
 			tagsInput = '';
+			paymentMethod = '現金';
 			requestAnimationFrame(() => amountInput?.focus());
 		} catch {
 			feedback = '網路錯誤';
@@ -143,6 +156,13 @@
 					{/each}
 				</select>
 			</div>
+
+			{#if paymentMethods.length > 0}
+				<div class="form-control mb-2">
+					<span class="label"><span class="label-text flex items-center gap-1"><Icon icon={icons.nav.payments} class="text-base opacity-60" />付款方式</span></span>
+					<PaymentMethodPicker methods={paymentMethods} bind:value={paymentMethod} size="xs" />
+				</div>
+			{/if}
 
 			<div class="form-control mb-2">
 				<label class="label" for="add-detail">

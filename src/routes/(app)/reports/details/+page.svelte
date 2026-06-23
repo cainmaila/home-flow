@@ -32,6 +32,7 @@
 	let categoryColor = $derived(buildCategoryColorMap(categories));
 
 	let availableTags: { id: number; name: string }[] = $state([]);
+	let paymentMethods: { id: number; name: string }[] = $state([]);
 
 	// --- Bulk selection ---
 	const selected = new SvelteSet<string>();
@@ -72,6 +73,14 @@
 			const res = await fetch('/api/tags');
 			if (!res.ok) return;
 			availableTags = await res.json();
+		} catch { /* non-blocking */ }
+	}
+
+	async function loadPaymentMethods() {
+		try {
+			const res = await fetch('/api/payment-methods');
+			if (!res.ok) return;
+			paymentMethods = await res.json();
 		} catch { /* non-blocking */ }
 	}
 
@@ -143,7 +152,7 @@
 
 	function exportCsv() {
 		const esc = (v: string) => (/[,"\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
-		const header = '日期,父分類,分類,明細,金額,標籤';
+		const header = '日期,父分類,分類,明細,金額,付款方式,標籤';
 		const rows = expenses.map((e) =>
 			[
 				e.expense_date,
@@ -151,6 +160,7 @@
 				esc(e.normalized_category),
 				esc(e.detail ?? ''),
 				String(e.amount),
+				esc(e.payment_method ?? '現金'),
 				esc((e.tags ?? []).join('、'))
 			].join(',')
 		);
@@ -188,7 +198,7 @@
 		filterMonth = params.get('month') ?? '';
 		filterDateFrom = params.get('dateFrom') ?? '';
 		filterDateTo = params.get('dateTo') ?? '';
-		await Promise.all([loadMeta(), loadCategories(), loadTags()]);
+		await Promise.all([loadMeta(), loadCategories(), loadTags(), loadPaymentMethods()]);
 
 		const urlCategory = params.get('category') ?? '';
 		if (urlCategory) {
@@ -273,7 +283,7 @@
 	{:else if errorMessage}
 		<div class="alert alert-error">{errorMessage}</div>
 	{:else}
-		<QuickAddRow onadded={search} />
+		<QuickAddRow onadded={search} {paymentMethods} />
 
 		<div class="flex items-center justify-between">
 			<span class="text-sm text-base-content/70">共 {count} 筆，合計 <strong class="tabular-nums">{formatAmount(total)}</strong></span>
@@ -307,6 +317,7 @@
 			{categoryColor}
 			{selected}
 			{availableTags}
+			{paymentMethods}
 			{total}
 			bind:saving
 			onrefresh={search}

@@ -22,6 +22,7 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
 		category_id?: number | null;
 		detail?: string | null;
 		tags?: string[];
+		payment_method?: string;
 	};
 
 	const sets: string[] = [];
@@ -44,6 +45,10 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
 	if (body.detail !== undefined) {
 		sets.push('detail = ?');
 		vals.push(body.detail?.trim().slice(0, 200) || null);
+	}
+	if (body.payment_method !== undefined) {
+		const pm = body.payment_method.trim().slice(0, 20);
+		if (pm) { sets.push('payment_method = ?'); vals.push(pm); }
 	}
 
 	const hasTags = body.tags !== undefined;

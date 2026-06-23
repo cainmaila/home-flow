@@ -42,6 +42,7 @@ export const icons = {
 		corrections: 'mdi:check-decagram-outline',
 		history: 'mdi:history',
 		categories: 'mdi:folder-multiple-outline',
+		payments: 'mdi:credit-card-outline',
 	},
 } as const;
 

@@ -71,5 +71,21 @@ export const GET: RequestHandler = async ({ platform, locals, url }) => {
 		percentage: totalExpense > 0 ? Math.round((r.total / totalExpense) * 1000) / 10 : 0
 	}));
 
-	return json({ month, totalExpense, categoryBreakdown, availableMonths });
+	const paymentResult = await db
+		.prepare(
+			`SELECT payment_method AS method, SUM(amount) AS total
+			 FROM expenses
+			 WHERE household_id = ? AND strftime('%Y-%m', expense_date) = ?
+			 GROUP BY payment_method ORDER BY total DESC`
+		)
+		.bind(HOUSEHOLD_ID, month)
+		.all<{ method: string; total: number }>();
+
+	const paymentBreakdown = paymentResult.results.map((r) => ({
+		method: r.method,
+		total: r.total,
+		percentage: totalExpense > 0 ? Math.round((r.total / totalExpense) * 1000) / 10 : 0
+	}));
+
+	return json({ month, totalExpense, categoryBreakdown, paymentBreakdown, availableMonths });
 };

@@ -15,6 +15,7 @@
 	let availableMonths: string[] = $state([]);
 	let totalExpense = $state(0);
 	let categoryBreakdown: { category: string; parent_category: string; category_id: number | null; parent_id: number | null; total: number; percentage: number }[] = $state([]);
+	let paymentBreakdown: { method: string; total: number; percentage: number }[] = $state([]);
 
 	// Matrix data
 	let matrixMonths: string[] = $state([]);
@@ -73,11 +74,13 @@
 				month: string | null;
 				totalExpense: number;
 				categoryBreakdown: typeof categoryBreakdown;
+				paymentBreakdown: typeof paymentBreakdown;
 				availableMonths: string[];
 			};
 			selectedMonth = data.month ?? '';
 			totalExpense = data.totalExpense;
 			categoryBreakdown = data.categoryBreakdown;
+			paymentBreakdown = data.paymentBreakdown ?? [];
 			availableMonths = data.availableMonths;
 		} catch {
 			errorMessage = '網路錯誤';
@@ -403,6 +406,37 @@
 										</td>
 										<td class="text-right tabular-nums">{formatAmount(cat.total)}</td>
 										<td class="text-right">{cat.percentage}%</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+		{/if}
+
+		<!-- Payment method breakdown -->
+		{#if paymentBreakdown.length > 0}
+			<div class="card bg-base-100 shadow">
+				<div class="card-body">
+					<h2 class="card-title text-lg">各付款方式</h2>
+					<div class="overflow-x-auto">
+						<table class="table table-sm">
+							<thead>
+								<tr>
+									<th>#</th>
+									<th>付款方式</th>
+									<th class="text-right">金額</th>
+									<th class="text-right">占比</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each paymentBreakdown as pm, i}
+									<tr class="hover">
+										<td>{i + 1}</td>
+										<td>{pm.method}</td>
+										<td class="text-right tabular-nums">{formatAmount(pm.total)}</td>
+										<td class="text-right">{pm.percentage}%</td>
 									</tr>
 								{/each}
 							</tbody>

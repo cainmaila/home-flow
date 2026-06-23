@@ -6,6 +6,7 @@
 	import { formatAmount } from '$lib/utils';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 	import CategoryPicker from '$lib/components/CategoryPicker.svelte';
+	import PaymentMethodPicker from '$lib/components/PaymentMethodPicker.svelte';
 
 	let {
 		expenses,
@@ -13,6 +14,7 @@
 		categoryColor,
 		selected,
 		availableTags,
+		paymentMethods,
 		total,
 		saving = $bindable(false),
 		onrefresh
@@ -22,6 +24,7 @@
 		categoryColor: Map<number, string>;
 		selected: SvelteSet<string>;
 		availableTags: { id: number; name: string }[];
+		paymentMethods: { id: number; name: string }[];
 		total: number;
 		saving: boolean;
 		onrefresh: () => Promise<void>;
@@ -58,7 +61,7 @@
 	}
 
 	// --- Per-cell edit state ---
-	type EditField = 'date' | 'category' | 'detail' | 'amount' | 'tags';
+	type EditField = 'date' | 'category' | 'detail' | 'amount' | 'tags' | 'payment';
 	let editing = $state<{ id: string; field: EditField } | null>(null);
 	let editValue = $state('');
 
@@ -69,6 +72,7 @@
 		else if (field === 'amount') editValue = String(exp.amount);
 		else if (field === 'detail') editValue = exp.detail ?? '';
 		else if (field === 'tags') editValue = (exp.tags ?? []).join(',');
+		else if (field === 'payment') editValue = exp.payment_method ?? '現金';
 	}
 
 	function cancelCell() { editing = null; }
@@ -90,6 +94,8 @@
 			if (!isNaN(n) && n >= 0 && n !== exp.amount) body = { amount: n };
 		} else if (field === 'detail') {
 			if (editValue !== (exp.detail ?? '')) body = { detail: editValue || null };
+		} else if (field === 'payment') {
+			if (editValue && editValue !== (exp.payment_method ?? '現金')) body = { payment_method: editValue };
 		} else if (field === 'tags') {
 			const newTags = editValue.split(',').map(t => t.trim()).filter(Boolean);
 			const oldTags = (exp.tags ?? []).join(',');
@@ -105,6 +111,20 @@
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(body)
+			});
+			if (!res.ok) { alert(`儲存失敗: ${await res.text()}`); return; }
+			await onrefresh();
+		} finally { saving = false; }
+	}
+
+	async function commitPayment(expId: string, method: string) {
+		editing = null;
+		saving = true;
+		try {
+			const res = await fetch(`/api/expenses/${expId}`, {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ payment_method: method })
 			});
 			if (!res.ok) { alert(`儲存失敗: ${await res.text()}`); return; }
 			await onrefresh();
@@ -170,6 +190,7 @@
 							<th class="cursor-pointer select-none text-right" onclick={() => handleSort('amount')}>
 								金額 {@render sortIcon('amount')}
 							</th>
+							<th>付款</th>
 							<th>標籤</th>
 							<th class="w-24"></th>
 						</tr>
@@ -229,6 +250,13 @@
 										<span class="text-right tabular-nums font-semibold">{formatAmount(exp.amount)}</span>
 									{/if}
 								</td>
+								<td class="cursor-pointer" onclick={() => { if (editing?.id !== exp.id || editing.field !== 'payment') startCell(exp, 'payment'); }}>
+									{#if editing?.id === exp.id && editing.field === 'payment'}
+										<PaymentMethodPicker methods={paymentMethods} value={editValue} size="xs" onselect={(name) => commitPayment(exp.id, name)} />
+									{:else}
+										<span class="badge badge-sm badge-ghost">{exp.payment_method ?? '現金'}</span>
+									{/if}
+								</td>
 								<td class="cursor-pointer" onclick={() => startCell(exp, 'tags')}>
 									{#if editing?.id === exp.id && editing.field === 'tags'}
 										<input use:focusOnMount type="text" class="input input-bordered input-xs w-32" bind:value={editValue} onkeydown={(e) => cellKeydown(e, exp)} onblur={() => commitCell(exp)} placeholder="逗號分隔" list="tag-options" />
@@ -246,7 +274,7 @@
 						<tr class="font-semibold">
 							<td colspan="4">合計</td>
 							<td class="text-right tabular-nums">{formatAmount(total)}</td>
-							<td colspan="2"></td>
+							<td colspan="3"></td>
 						</tr>
 					</tfoot>
 				</table>

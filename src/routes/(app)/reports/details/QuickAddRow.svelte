@@ -1,12 +1,14 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
 	import { icons } from '$lib/icons';
+	import PaymentMethodPicker from '$lib/components/PaymentMethodPicker.svelte';
 
-	let { onadded }: { onadded: () => Promise<void> } = $props();
+	let { onadded, paymentMethods = [] }: { onadded: () => Promise<void>; paymentMethods?: { id: number; name: string }[] } = $props();
 
 	let date = $state(new Date().toISOString().slice(0, 10));
 	let detail = $state('');
 	let amount = $state('');
+	let paymentMethod = $state('現金');
 	let saving = $state(false);
 	let feedback = $state('');
 
@@ -25,7 +27,8 @@
 				body: JSON.stringify({
 					expense_date: date,
 					amount: n,
-					detail: detail || undefined
+					detail: detail || undefined,
+					payment_method: paymentMethod
 				})
 			});
 			if (!res.ok) {
@@ -36,6 +39,7 @@
 			feedback = '✓ 已新增';
 			detail = '';
 			amount = '';
+			paymentMethod = '現金';
 			await onadded();
 			requestAnimationFrame(() => detailEl?.focus());
 		} catch {
@@ -66,6 +70,9 @@
 		bind:value={amount}
 		onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } }}
 	/>
+	{#if paymentMethods.length > 0}
+		<PaymentMethodPicker methods={paymentMethods} bind:value={paymentMethod} size="xs" />
+	{/if}
 	<button class="btn btn-primary btn-sm gap-1" onclick={add} disabled={saving || !amount}>
 		{#if saving}
 			<span class="loading loading-spinner loading-xs"></span>
