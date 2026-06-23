@@ -101,6 +101,32 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 		if (parent.parent_id !== null) throw error(400, 'Cannot nest beyond two levels');
 	}
 
+	// Re-activate soft-deleted category if exists
+	const deleted = await db
+		.prepare(
+			body.parentId !== undefined
+				? 'SELECT id FROM categories WHERE household_id = ? AND name = ? AND parent_id = ? AND is_deleted = 1'
+				: 'SELECT id FROM categories WHERE household_id = ? AND name = ? AND parent_id IS NULL AND is_deleted = 1'
+		)
+		.bind(...(body.parentId !== undefined ? [householdId, body.name.trim(), body.parentId] : [householdId, body.name.trim()]))
+		.first<{ id: number }>();
+
+	if (deleted) {
+		await db
+			.prepare(
+				`UPDATE categories SET is_deleted = 0, description = ?, icon = ?, color = ?, updated_at = datetime('now')
+				 WHERE id = ?`
+			)
+			.bind(
+				body.description?.trim() ?? null,
+				body.icon?.trim() ?? null,
+				body.color ?? null,
+				deleted.id
+			)
+			.run();
+		return json({ ok: true, id: deleted.id });
+	}
+
 	const maxOrder = await db
 		.prepare(
 			body.parentId !== undefined
