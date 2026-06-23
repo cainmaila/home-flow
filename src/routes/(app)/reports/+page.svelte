@@ -54,6 +54,7 @@
 	let filteredTotal = $state(0);
 	let filteredCount = $state(0);
 	let filterLoading = $state(false);
+	let selectedParentId: number | null = $state(null);
 
 	// Category palette — muted, harmonized with the emerald brand theme
 	const COLORS = [
@@ -62,6 +63,31 @@
 		'#3f8f8a', '#9ca84f', '#cf8f5a', '#6b8fd5', '#a86a7f'
 	];
 
+	// ponytail: roll-up to 大類; vs上月 relies on matrix's 6-month window
+	let parentBreakdown = $derived.by(() => {
+		const map = new Map<string, { bigName: string; bigId: number | null; total: number }>();
+		for (const r of categoryBreakdown) {
+			const bigName = r.parent_id ? r.parent_category : (r.category_id ? r.category : '未分類');
+			const bigId = r.parent_id ?? r.category_id ?? null;
+			const key = bigId != null ? String(bigId) : bigName;
+			const existing = map.get(key);
+			if (existing) existing.total += r.total;
+			else map.set(key, { bigName, bigId, total: r.total });
+		}
+		const denom = totalExpense || 1;
+		const prevMonth = matrixMonths[matrixMonths.indexOf(selectedMonth) - 1];
+		return [...map.values()]
+			.map(r => {
+				const percentage = Math.round((r.total / denom) * 1000) / 10;
+				const mRow = matrixRows.find(m => m.big_category === r.bigName);
+				const prevTotal = prevMonth && mRow ? (mRow.totals[prevMonth] ?? 0) : null;
+				const diffPercent = prevTotal != null && prevTotal > 0
+					? Math.round(((r.total - prevTotal) / prevTotal) * 1000) / 10
+					: null;
+				return { ...r, percentage, diffPercent };
+			})
+			.sort((a, b) => b.total - a.total);
+	});
 
 	async function loadMonthlyReport(month?: string) {
 		errorMessage = '';
@@ -140,11 +166,12 @@
 		}
 	}
 
-	async function loadFilteredExpenses(category: string, categoryId?: number | null) {
+	async function loadFilteredExpenses(category: string, categoryId?: number | null, parentId?: number | null) {
 		filterLoading = true;
 		const params = new URLSearchParams();
 		params.set('month', selectedMonth);
-		if (categoryId) params.set('categoryId', String(categoryId));
+		if (parentId) params.set('parentId', String(parentId));
+		else if (categoryId) params.set('categoryId', String(categoryId));
 		else params.set('category', category);
 		try {
 			const res = await fetch(`/api/expenses/search?${params}`);
@@ -166,6 +193,7 @@
 
 	function clearCategoryFilter() {
 		selectedCategory = '';
+		selectedParentId = null;
 		filteredExpenses = [];
 		filteredTotal = 0;
 		filteredCount = 0;
@@ -178,7 +206,19 @@
 			return;
 		}
 		selectedCategory = category;
+		selectedParentId = null;
 		await loadFilteredExpenses(category, categoryId);
+		renderDoughnutChart();
+	}
+
+	async function selectBigCategory(bigName: string, bigId: number | null) {
+		if (selectedCategory === bigName) {
+			clearCategoryFilter();
+			return;
+		}
+		selectedCategory = bigName;
+		selectedParentId = bigId;
+		await loadFilteredExpenses(bigName, null, bigId);
 		renderDoughnutChart();
 	}
 
@@ -186,6 +226,7 @@
 		const value = (event.target as HTMLSelectElement).value;
 		if (value && value !== selectedMonth) {
 			selectedCategory = '';
+			selectedParentId = null;
 			filteredExpenses = [];
 			await loadMonthlyReport(value);
 			renderDoughnutChart();
@@ -198,6 +239,7 @@
 		const clickedMonth = trendMonths[index]?.month;
 		if (!clickedMonth || clickedMonth === selectedMonth) return;
 		selectedCategory = '';
+		selectedParentId = null;
 		filteredExpenses = [];
 		await loadMonthlyReport(clickedMonth);
 		renderDoughnutChart();
@@ -206,24 +248,52 @@
 	function renderDoughnutChart() {
 		if (!doughnutCanvas) return;
 		if (doughnutChart) doughnutChart.destroy();
-		if (categoryBreakdown.length === 0) return;
+		if (parentBreakdown.length === 0) return;
 
-		const bgColors = COLORS.slice(0, categoryBreakdown.length).map((color, i) => {
-			if (selectedCategory && categoryBreakdown[i].category !== selectedCategory) {
+		const bgColors = COLORS.slice(0, parentBreakdown.length).map((color, i) => {
+			if (selectedCategory && parentBreakdown[i].bigName !== selectedCategory) {
 				return color + '40';
 			}
 			return color;
 		});
 
+		const trendIdx = trendMonths.findIndex(m => m.month === selectedMonth);
+		const prevMonthTotal = trendIdx > 0 ? trendMonths[trendIdx - 1].total : null;
+		const totalDiffPct = prevMonthTotal && prevMonthTotal > 0
+			? Math.round(((totalExpense - prevMonthTotal) / prevMonthTotal) * 1000) / 10
+			: null;
+
+		const centerTextPlugin = {
+			id: 'centerText',
+			afterDraw(chart: Chart) {
+				const { ctx, chartArea } = chart;
+				const cx = (chartArea.left + chartArea.right) / 2;
+				const cy = (chartArea.top + chartArea.bottom) / 2;
+				ctx.save();
+				ctx.textAlign = 'center';
+				ctx.textBaseline = 'middle';
+				ctx.font = 'bold 16px system-ui, sans-serif';
+				ctx.fillStyle = '#374151';
+				ctx.fillText(formatAmount(totalExpense), cx, totalDiffPct !== null ? cy - 10 : cy);
+				if (totalDiffPct !== null) {
+					ctx.font = '12px system-ui, sans-serif';
+					ctx.fillStyle = totalDiffPct >= 0 ? '#ef4444' : '#22c55e';
+					const sign = totalDiffPct >= 0 ? '+' : '';
+					ctx.fillText(`vs上月 ${sign}${totalDiffPct}%`, cx, cy + 10);
+				}
+				ctx.restore();
+			}
+		};
+
 		doughnutChart = new Chart(doughnutCanvas, {
 			type: 'doughnut',
 			data: {
-				labels: categoryBreakdown.map((c) => c.parent_category !== '未分類' ? `${c.parent_category} > ${c.category}` : c.category),
+				labels: parentBreakdown.map(r => r.bigName),
 				datasets: [{
-					data: categoryBreakdown.map((c) => c.total),
+					data: parentBreakdown.map(r => r.total),
 					backgroundColor: bgColors,
-					borderWidth: categoryBreakdown.map((c) =>
-						selectedCategory === c.category ? 3 : 1
+					borderWidth: parentBreakdown.map(r =>
+						selectedCategory === r.bigName ? 3 : 1
 					)
 				}]
 			},
@@ -232,21 +302,22 @@
 				onClick(_event: ChartEvent, elements: ActiveElement[]) {
 					if (elements.length === 0) return;
 					const index = elements[0].index;
-					const category = categoryBreakdown[index]?.category;
-					if (category) selectCategory(category, categoryBreakdown[index]?.category_id);
+					const item = parentBreakdown[index];
+					if (item?.bigId) selectBigCategory(item.bigName, item.bigId);
 				},
 				plugins: {
-					legend: { position: 'bottom' },
+					legend: { display: false },
 					tooltip: {
 						callbacks: {
 							label(ctx) {
-								const item = categoryBreakdown[ctx.dataIndex];
-								return `${item.category}: ${formatAmount(item.total)} (${item.percentage}%)`;
+								const item = parentBreakdown[ctx.dataIndex];
+								return `${item.bigName}: ${formatAmount(item.total)} (${item.percentage}%)`;
 							}
 						}
 					}
 				}
-			}
+			},
+			plugins: [centerTextPlugin]
 		});
 	}
 
@@ -359,12 +430,33 @@
 
 		<!-- Charts -->
 		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-			{#if categoryBreakdown.length > 0}
+			{#if parentBreakdown.length > 0}
 				<div class="card bg-base-100 shadow">
 					<div class="card-body">
 						<h2 class="card-title text-lg">分類占比</h2>
 						<div class="max-w-xs mx-auto">
 							<canvas bind:this={doughnutCanvas}></canvas>
+						</div>
+						<div class="mt-4 space-y-1">
+							{#each parentBreakdown as item, i}
+								<button
+									class="flex items-center w-full gap-2 text-sm px-2 py-1 rounded-lg transition-colors
+										{selectedCategory === item.bigName ? 'bg-primary/10 font-medium' : 'hover:bg-base-200'}"
+									onclick={() => item.bigId && selectBigCategory(item.bigName, item.bigId)}
+								>
+									<span class="w-3 h-3 rounded-sm shrink-0" style="background:{COLORS[i % COLORS.length]}"></span>
+									<span class="flex-1 text-left truncate">{item.bigName}</span>
+									<span class="tabular-nums text-right">{formatAmount(item.total)}</span>
+									<span class="tabular-nums w-12 text-right text-base-content/60">{item.percentage}%</span>
+									{#if item.diffPercent !== null}
+										<span class="tabular-nums w-16 text-right text-xs {item.diffPercent >= 0 ? 'text-error' : 'text-success'}">
+											{item.diffPercent >= 0 ? '▲' : '▼'}{Math.abs(item.diffPercent)}%
+										</span>
+									{:else}
+										<span class="w-16"></span>
+									{/if}
+								</button>
+							{/each}
 						</div>
 					</div>
 				</div>
@@ -399,7 +491,7 @@
 							</thead>
 							<tbody>
 								{#each categoryBreakdown as cat, i}
-									<tr class={selectedCategory === cat.category ? 'bg-primary/10' : 'hover'}>
+									<tr class={selectedCategory === cat.category || (selectedParentId != null && (cat.parent_id === selectedParentId || (!cat.parent_id && cat.category_id === selectedParentId))) ? 'bg-primary/10' : 'hover'}>
 										<td>{i + 1}</td>
 										<td>
 											<button class="link link-primary" onclick={() => selectCategory(cat.category, cat.category_id)}>

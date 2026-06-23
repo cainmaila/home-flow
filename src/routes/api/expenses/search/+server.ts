@@ -15,6 +15,7 @@ export const GET: RequestHandler = async ({ platform, locals, url }) => {
 	const dateTo = url.searchParams.get('dateTo');
 	const category = url.searchParams.get('category');
 	const categoryId = url.searchParams.get('categoryId');
+	const parentId = url.searchParams.get('parentId');
 	const fixed = url.searchParams.get('fixed');
 	const tagsParam = url.searchParams.get('tags');
 
@@ -33,7 +34,10 @@ export const GET: RequestHandler = async ({ platform, locals, url }) => {
 		conditions.push('e.expense_date <= ?');
 		binds.push(dateTo);
 	}
-	if (categoryId) {
+	if (parentId) {
+		conditions.push('COALESCE(c.parent_id, c.id) = ?');
+		binds.push(Number(parentId));
+	} else if (categoryId) {
 		conditions.push('e.category_id = ?');
 		binds.push(Number(categoryId));
 	} else if (category) {
