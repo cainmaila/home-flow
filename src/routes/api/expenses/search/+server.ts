@@ -18,6 +18,7 @@ export const GET: RequestHandler = async ({ platform, locals, url }) => {
 	const parentId = url.searchParams.get('parentId');
 	const fixed = url.searchParams.get('fixed');
 	const tagsParam = url.searchParams.get('tags');
+	const uncategorized = url.searchParams.get('uncategorized');
 
 	const conditions: string[] = ['e.household_id = ?'];
 	const binds: (string | number)[] = [HOUSEHOLD_ID];
@@ -52,6 +53,9 @@ export const GET: RequestHandler = async ({ platform, locals, url }) => {
 		conditions.push(
 			`NOT EXISTS (SELECT 1 FROM expense_tags et2 JOIN tags t2 ON et2.tag_id = t2.id WHERE et2.expense_id = e.id AND t2.name = '固定')`
 		);
+	}
+	if (uncategorized === 'true') {
+		conditions.push('e.category_id IS NULL');
 	}
 	if (tagsParam) {
 		const tagNames = tagsParam.split(',').map((t) => t.trim()).filter(Boolean);

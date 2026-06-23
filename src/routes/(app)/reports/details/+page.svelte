@@ -18,6 +18,7 @@
 	let filterCategoryId = $state<number | null>(null);
 	let filterCategoryName = $state('');
 	let filterTag = $state('');
+	let filterUncategorized = $state(false);
 
 	let loading = $state(true);
 	let errorMessage = $state('');
@@ -48,7 +49,7 @@
 	let selectedCategoryColor = $derived(filterCategoryId != null ? categoryColor.get(filterCategoryId) ?? null : null);
 
 	let hasActiveFilters = $derived(
-		!!filterMonth || filterCategoryId != null || !!filterCategoryName || !!filterTag || !!filterDateFrom || !!filterDateTo
+		!!filterMonth || filterCategoryId != null || !!filterCategoryName || !!filterTag || !!filterDateFrom || !!filterDateTo || filterUncategorized
 	);
 
 	async function loadMeta() {
@@ -96,6 +97,7 @@
 		if (filterCategoryId != null) params.set('categoryId', String(filterCategoryId));
 		else if (filterCategoryName) params.set('category', filterCategoryName);
 		if (filterTag) params.set('tags', filterTag);
+		if (filterUncategorized) params.set('uncategorized', 'true');
 
 		try {
 			const res = await fetch(`/api/expenses/search?${params}`);
@@ -178,12 +180,14 @@
 		filterMonth = ''; filterDateFrom = ''; filterDateTo = '';
 		filterCategoryId = null; filterCategoryName = '';
 		filterTag = '';
+		filterUncategorized = false;
 		search();
 	}
 
 	function selectCategory(id: number) {
 		filterCategoryId = id;
 		filterCategoryName = '';
+		filterUncategorized = false;
 		search();
 	}
 
@@ -245,6 +249,13 @@
 		<input type="date" class="input input-bordered input-sm" bind:value={filterDateFrom} onchange={() => search()} title="日期從" />
 		<span class="text-base-content/30">–</span>
 		<input type="date" class="input input-bordered input-sm" bind:value={filterDateTo} onchange={() => search()} title="日期到" />
+
+		<button
+			class="btn btn-sm gap-1 {filterUncategorized ? 'btn-warning' : 'btn-outline'}"
+			onclick={() => { filterUncategorized = !filterUncategorized; if (filterUncategorized) { filterCategoryId = null; filterCategoryName = ''; } search(); }}
+		>
+			<Icon icon={icons.alert} class="text-base" />未分類
+		</button>
 	</div>
 
 	<!-- Active filter chips -->
@@ -270,6 +281,11 @@
 			{#if filterDateFrom || filterDateTo}
 				<button class="badge badge-sm gap-1 cursor-pointer hover:badge-error transition-colors" onclick={() => { filterDateFrom = ''; filterDateTo = ''; search(); }}>
 					{filterDateFrom || '…'}–{filterDateTo || '…'}<Icon icon={icons.close} class="text-xs" />
+				</button>
+			{/if}
+			{#if filterUncategorized}
+				<button class="badge badge-sm badge-warning gap-1 cursor-pointer hover:badge-error transition-colors" onclick={() => { filterUncategorized = false; search(); }}>
+					未分類<Icon icon={icons.close} class="text-xs" />
 				</button>
 			{/if}
 			<button class="text-xs text-base-content/40 hover:text-error transition-colors ml-1" onclick={clearFilters}>清除全部</button>

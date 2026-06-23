@@ -230,18 +230,18 @@
 											onclose={cancelCell}
 										/>
 									{:else}
-										<span class="inline-flex items-center gap-1.5">
-											{#if exp.category_id != null && categoryColor.get(exp.category_id)}
-												<span class="w-2 h-2 rounded-full inline-block shrink-0" style="background-color:{categoryColor.get(exp.category_id)}"></span>
-											{:else}
-												<span class="w-2 h-2 rounded-full inline-block shrink-0 bg-base-content/20"></span>
-											{/if}
-											{#if exp.category_id == null}
-						<span class="text-base-content/40">未分類</span>
-					{:else}
-						<span>{#if exp.parent_category_name}<span class="text-base-content/45">{exp.parent_category_name} ›</span> {/if}{exp.normalized_category}</span>
-					{/if}
-										</span>
+										{#if exp.category_id == null}
+											<span class="badge badge-warning badge-sm gap-1"><Icon icon={icons.alert} class="text-sm" />未分類</span>
+										{:else}
+											<span class="inline-flex items-center gap-1.5">
+												{#if categoryColor.get(exp.category_id)}
+													<span class="w-2 h-2 rounded-full inline-block shrink-0" style="background-color:{categoryColor.get(exp.category_id)}"></span>
+												{:else}
+													<span class="w-2 h-2 rounded-full inline-block shrink-0 bg-base-content/20"></span>
+												{/if}
+												<span>{#if exp.parent_category_name}<span class="text-base-content/45">{exp.parent_category_name} ›</span> {/if}{exp.normalized_category}</span>
+											</span>
+										{/if}
 									{/if}
 								</td>
 								<td class="cursor-pointer" onclick={() => startCell(exp, 'detail')}>
