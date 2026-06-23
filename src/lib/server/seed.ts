@@ -1,4 +1,4 @@
-import { allowlist } from '$lib/config/allowlist';
+import { allowlist } from '$lib/server/auth/allowlist';
 
 /**
  * Seed the default household and all allowlist users into D1.

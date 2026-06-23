@@ -3,7 +3,6 @@ import type { RequestHandler } from './$types';
 import { requireAdmin } from '$lib/server/auth/guard';
 import { isAIEnabled } from '$lib/server/ai/config';
 import { suggestCategories, loadCategoriesWithExamples } from '$lib/server/ai/gemini';
-import { isQuotaExceeded } from '$lib/server/ai/quota';
 
 export const POST: RequestHandler = async ({ request, locals, platform }) => {
 	requireAdmin(locals);
@@ -11,7 +10,6 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 	const env = platform?.env;
 	if (!env) throw error(500, 'Platform not available');
 	if (!isAIEnabled(env)) throw error(400, 'AI feature is disabled');
-	if (isQuotaExceeded()) throw error(429, 'AI quota exceeded');
 
 	const db = env.DB;
 	if (!db) throw error(500, 'Database not available');

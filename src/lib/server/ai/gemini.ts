@@ -1,5 +1,3 @@
-import { recordCall } from './quota';
-
 export interface CategorySuggestion {
 	raw_category: string;
 	suggested_category: string;
@@ -161,7 +159,6 @@ export async function suggestCategories(
 			}));
 
 		consecutiveFailures = 0;
-		recordCall();
 
 		return valid;
 	} catch (err) {

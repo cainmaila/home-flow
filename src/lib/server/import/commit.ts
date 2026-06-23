@@ -2,7 +2,6 @@ import type { PreviewRecord } from './preview';
 import { resolveCategoriesForImport } from '../category/resolve';
 import { isAIEnabled, getAutoAcceptThreshold } from '../ai/config';
 import { suggestCategories, loadCategoriesWithExamples } from '../ai/gemini';
-import { isAutoSuggestDisabled, isQuotaExceeded } from '../ai/quota';
 import { setExpenseTags } from '../tags';
 
 export interface AISuggestionResult {
@@ -114,7 +113,7 @@ export async function commitImport(
 
 	// T5.4: Post-import AI suggestions for unmatched categories
 	let aiSuggestions: AISuggestionResult | undefined;
-	if (env && isAIEnabled(env) && !isQuotaExceeded() && !isAutoSuggestDisabled()) {
+	if (env && isAIEnabled(env)) {
 		aiSuggestions = await generatePostImportSuggestions(
 			db,
 			importId,

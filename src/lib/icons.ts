@@ -16,12 +16,8 @@ export const icons = {
 
 	// UI
 	menu: 'mdi:menu',
-	filter: 'mdi:filter',
-	filterRemove: 'mdi:filter-remove',
 	sortChevron: 'mdi:chevron-down',
-	search: 'mdi:magnify',
 	ai: 'mdi:auto-fix',
-	selected: 'mdi:checkbox-multiple-marked-outline',
 
 	// Feedback
 	check: 'mdi:check-circle',

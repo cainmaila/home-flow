@@ -1,4 +1,6 @@
-import { allowlist } from '$lib/config/allowlist';
+export const allowlist = [
+	{ email: 'cainmaila@gmail.com', name: 'cainmaila', role: 'admin' as const },
+] as const;
 
 export function isAllowed(email: string): boolean {
 	return allowlist.some((u) => u.email === email);
