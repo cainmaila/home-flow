@@ -36,8 +36,8 @@
 			filled: 'bg-teal-500 text-white border-teal-500'
 		},
 		gray: {
-			outline: 'border-gray-300 text-gray-600 bg-gray-50',
-			filled: 'bg-gray-600 text-white border-gray-600'
+			outline: 'border-gray-300 text-gray-500 bg-gray-50',
+			filled: 'bg-gray-400 text-white border-gray-400'
 		},
 		purple: {
 			outline: 'border-purple-400 text-purple-600 bg-purple-50',
