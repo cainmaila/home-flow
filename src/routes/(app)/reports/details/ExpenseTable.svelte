@@ -3,7 +3,7 @@
 	import Icon from '@iconify/svelte';
 	import { icons } from '$lib/icons';
 	import type { CategoryParent, Expense } from '$lib/types';
-	import { formatAmount } from '$lib/utils';
+	import { formatAmount, fetchCategoryByDetail } from '$lib/utils';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 	import CategoryPicker from '$lib/components/CategoryPicker.svelte';
 	import PaymentMethodPicker from '$lib/components/PaymentMethodPicker.svelte';
@@ -95,7 +95,13 @@
 			const n = Number(editValue);
 			if (!isNaN(n) && n >= 0 && n !== exp.amount) body = { amount: n };
 		} else if (field === 'detail') {
-			if (editValue !== (exp.detail ?? '')) body = { detail: editValue || null };
+			if (editValue !== (exp.detail ?? '')) {
+				body = { detail: editValue || null };
+				if (editValue && exp.category_id == null) {
+					const catId = await fetchCategoryByDetail(editValue);
+					if (catId != null) body.category_id = catId;
+				}
+			}
 		} else if (field === 'payment') {
 			if (editValue && editValue !== (exp.payment_method ?? '現金')) body = { payment_method: editValue };
 		} else if (field === 'tags') {

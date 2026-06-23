@@ -283,7 +283,7 @@
 	{:else if errorMessage}
 		<div class="alert alert-error">{errorMessage}</div>
 	{:else}
-		<QuickAddRow onadded={() => search(false)} {paymentMethods} {categories} />
+		<QuickAddRow onadded={() => search(false)} {paymentMethods} />
 
 		<div class="flex items-center justify-between">
 			<span class="text-sm text-base-content/70">共 {count} 筆，合計 <strong class="tabular-nums">{formatAmount(total)}</strong></span>
