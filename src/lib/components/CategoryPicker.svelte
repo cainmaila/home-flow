@@ -29,7 +29,7 @@
 	let search = $state('');
 	let inputEl: HTMLInputElement | undefined = $state(undefined);
 	let btnEl: HTMLButtonElement | undefined = $state(undefined);
-	let pos = $state({ top: 0, left: 0 });
+	let pos = $state({ top: 0, left: 0, maxH: 320 });
 	let didAutoOpen = false;
 
 	let selectedLabel = $derived.by(() => {
@@ -60,7 +60,14 @@
 		search = '';
 		if (btnEl) {
 			const rect = btnEl.getBoundingClientRect();
-			pos = { top: rect.bottom + 4, left: rect.left };
+			const spaceBelow = window.innerHeight - rect.bottom - 8;
+			const spaceAbove = rect.top - 8;
+			if (spaceBelow >= 200 || spaceBelow >= spaceAbove) {
+				pos = { top: rect.bottom + 4, left: rect.left, maxH: Math.min(320, Math.max(spaceBelow, 160)) };
+			} else {
+				const h = Math.min(320, Math.max(spaceAbove, 160));
+				pos = { top: rect.top - 4 - h, left: rect.left, maxH: h };
+			}
 		}
 		requestAnimationFrame(() => inputEl?.focus());
 	}
@@ -106,7 +113,7 @@
 
 	{#if open}
 		<button type="button" class="fixed inset-0 z-10" aria-label="關閉" onclick={close}></button>
-		<div class="fixed z-20 w-72 max-h-80 overflow-y-auto rounded-box bg-base-100 shadow-lg border border-base-300" style="top:{pos.top}px;left:{pos.left}px">
+		<div class="fixed z-20 w-72 overflow-y-auto rounded-box bg-base-100 shadow-lg border border-base-300" style="top:{pos.top}px;left:{pos.left}px;max-height:{pos.maxH}px">
 			<div class="sticky top-0 bg-base-100 p-2 border-b border-base-200">
 				<input
 					bind:this={inputEl}
