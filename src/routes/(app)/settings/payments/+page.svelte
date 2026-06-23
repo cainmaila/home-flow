@@ -2,6 +2,8 @@
 	import Icon from '@iconify/svelte';
 	import { icons } from '$lib/icons';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
+	import Tag from '$lib/components/Tag.svelte';
+	import { tagColor } from '$lib/tagColor';
 
 	let methods: { id: number; name: string }[] = $state([]);
 	let loading = $state(true);
@@ -100,12 +102,7 @@
 				{:else}
 					<div class="flex flex-wrap gap-2">
 						{#each methods as m}
-							<div class="badge badge-lg gap-2">
-								{m.name}
-								<button class="cursor-pointer hover:text-error" onclick={() => (deletingId = m.id)} aria-label="刪除">
-									<Icon icon={icons.close} class="text-sm" />
-								</button>
-							</div>
+							<Tag label={m.name} color={tagColor(m.name)} variant="filled" removable onremove={() => (deletingId = m.id)} />
 						{/each}
 					</div>
 				{/if}

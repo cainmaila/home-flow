@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
+	import type { TagColor } from '$lib/tagColor';
 
-	type TagColor = 'orange' | 'green' | 'teal' | 'gray' | 'purple' | 'red' | 'blue';
 	type TagVariant = 'outline' | 'filled';
 
 	let {

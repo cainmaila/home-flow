@@ -7,6 +7,8 @@
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 	import CategoryPicker from '$lib/components/CategoryPicker.svelte';
 	import PaymentMethodPicker from '$lib/components/PaymentMethodPicker.svelte';
+	import Tag from '$lib/components/Tag.svelte';
+	import { tagColor } from '$lib/tagColor';
 
 	let {
 		expenses,
@@ -254,14 +256,14 @@
 									{#if editing?.id === exp.id && editing.field === 'payment'}
 										<PaymentMethodPicker methods={paymentMethods} value={editValue} size="xs" onselect={(name) => commitPayment(exp.id, name)} />
 									{:else}
-										<span class="badge badge-sm badge-ghost">{exp.payment_method ?? '現金'}</span>
+										<Tag label={exp.payment_method ?? '現金'} color={tagColor(exp.payment_method ?? '現金')} variant="filled" size="xs" />
 									{/if}
 								</td>
 								<td class="cursor-pointer" onclick={() => startCell(exp, 'tags')}>
 									{#if editing?.id === exp.id && editing.field === 'tags'}
 										<input use:focusOnMount type="text" class="input input-bordered input-xs w-32" bind:value={editValue} onkeydown={(e) => cellKeydown(e, exp)} onblur={() => commitCell(exp)} placeholder="逗號分隔" list="tag-options" />
 									{:else}
-										<span class="space-x-1">{#each exp.tags ?? [] as tag}<span class="badge badge-sm badge-ghost rounded-full font-normal">{tag}</span>{/each}</span>
+										<span class="space-x-1">{#each exp.tags ?? [] as tag}<Tag label={tag} color={tagColor(tag)} variant="outline" size="xs" />{/each}</span>
 									{/if}
 								</td>
 								<td class="opacity-0 group-hover:opacity-100 transition-opacity">

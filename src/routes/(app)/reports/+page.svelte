@@ -4,6 +4,8 @@
 	import Icon from '@iconify/svelte';
 	import { icons } from '$lib/icons';
 	import { formatAmount } from '$lib/utils';
+	import Tag from '$lib/components/Tag.svelte';
+	import { tagColor } from '$lib/tagColor';
 	import MatrixTable from './MatrixTable.svelte';
 
 	// --- State ---
@@ -477,7 +479,7 @@
 											<td>{exp.normalized_category}</td>
 											<td class="text-sm text-base-content/70">{exp.detail ?? ''}</td>
 											<td class="text-right tabular-nums">{formatAmount(exp.amount)}</td>
-											<td class="space-x-1">{#each exp.tags ?? [] as tag}<span class="badge badge-sm badge-outline">{tag}</span>{/each}</td>
+											<td class="space-x-1">{#each exp.tags ?? [] as tag}<Tag label={tag} color={tagColor(tag)} variant="outline" size="sm" />{/each}</td>
 										</tr>
 									{/each}
 								</tbody>
