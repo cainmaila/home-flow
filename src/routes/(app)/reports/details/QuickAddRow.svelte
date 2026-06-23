@@ -2,18 +2,28 @@
 	import Icon from '@iconify/svelte';
 	import { icons } from '$lib/icons';
 	import PaymentMethodPicker from '$lib/components/PaymentMethodPicker.svelte';
+	import type { CategoryParent } from '$lib/types';
+	import { fetchCategoryByDetail } from '$lib/utils';
 
-	let { onadded, paymentMethods = [] }: { onadded: () => Promise<void>; paymentMethods?: { id: number; name: string }[] } = $props();
+	let { onadded, paymentMethods = [], categories = [] }: { onadded: () => Promise<void>; paymentMethods?: { id: number; name: string }[]; categories?: CategoryParent[] } = $props();
 
 	let date = $state(new Date().toISOString().slice(0, 10));
 	let detail = $state('');
 	let amount = $state('');
+	let categoryId = $state<number | null>(null);
+	let categoryAuto = $state(false);
 	let paymentMethod = $state('現金');
 	let saving = $state(false);
 	let feedback = $state('');
 
 	let detailEl: HTMLInputElement | undefined = $state();
 	let amountEl: HTMLInputElement | undefined = $state();
+
+	async function lookupCategory() {
+		if (categoryId != null && !categoryAuto) return; // 尊重手選
+		const id = await fetchCategoryByDetail(detail);
+		if (id != null) { categoryId = id; categoryAuto = true; }
+	}
 
 	async function add() {
 		const n = Number(amount);
@@ -27,6 +37,7 @@
 				body: JSON.stringify({
 					expense_date: date,
 					amount: n,
+					category_id: categoryId ?? undefined,
 					detail: detail || undefined,
 					payment_method: paymentMethod
 				})
@@ -39,6 +50,8 @@
 			feedback = '✓ 已新增';
 			detail = '';
 			amount = '';
+			categoryId = null;
+			categoryAuto = false;
 			paymentMethod = '現金';
 			await onadded();
 			requestAnimationFrame(() => detailEl?.focus());
@@ -58,8 +71,19 @@
 		class="input input-bordered input-sm w-40"
 		placeholder="明細"
 		bind:value={detail}
+		onblur={lookupCategory}
 		onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); amountEl?.focus(); } }}
 	/>
+	<select class="select select-bordered select-sm w-32" bind:value={categoryId} onchange={() => categoryAuto = false}>
+		<option value={null}>分類</option>
+		{#each categories as group}
+			<optgroup label={group.name}>
+				{#each group.children as child}
+					<option value={child.id}>{child.name}</option>
+				{/each}
+			</optgroup>
+		{/each}
+	</select>
 	<input
 		bind:this={amountEl}
 		type="number"

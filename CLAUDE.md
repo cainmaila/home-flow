@@ -89,7 +89,7 @@ Plan of record: `docs/Execution-Plan.md`.
 
 **Every task's code must pass a Ponytail review before marking `done`.**
 
-After implementation, spawn a `caveman:cavecrew-reviewer` agent with Ponytail mode to review the diff. Focus on:
+After implementation, run the `ponytail:ponytail-review` skill on the diff. Focus on:
 - Over-engineering: abstractions, config, or flexibility nobody asked for.
 - Dead code or unused imports introduced by this task.
 - Shorter alternatives the implementation missed (stdlib, platform native, one-liner).

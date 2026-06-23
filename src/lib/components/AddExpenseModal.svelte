@@ -2,6 +2,7 @@
 	import Icon from '@iconify/svelte';
 	import { icons } from '$lib/icons';
 	import PaymentMethodPicker from '$lib/components/PaymentMethodPicker.svelte';
+	import { fetchCategoryByDetail } from '$lib/utils';
 
 	let open = $state(false);
 	let saving = $state(false);
@@ -10,6 +11,7 @@
 	let expenseDate = $state(new Date().toISOString().slice(0, 10));
 	let amount = $state('');
 	let categoryId = $state<number | null>(null);
+	let categoryAuto = $state(false);
 	let detail = $state('');
 	let tagsInput = $state('');
 	let paymentMethod = $state('現金');
@@ -47,6 +49,12 @@
 		} catch { /* non-blocking */ }
 	}
 
+	async function lookupCategory() {
+		if (categoryId != null && !categoryAuto) return; // 尊重手選
+		const id = await fetchCategoryByDetail(detail);
+		if (id != null) { categoryId = id; categoryAuto = true; }
+	}
+
 	function openModal() {
 		open = true;
 		feedback = '';
@@ -81,6 +89,8 @@
 			feedback = '✓ 已新增';
 			amount = '';
 			detail = '';
+			categoryId = null;
+			categoryAuto = false;
 			tagsInput = '';
 			paymentMethod = '現金';
 			requestAnimationFrame(() => amountInput?.focus());
@@ -145,7 +155,7 @@
 						<Icon icon={icons.tag} class="text-base opacity-60" />分類
 					</span>
 				</label>
-				<select id="add-category" class="select select-bordered select-sm" bind:value={categoryId}>
+				<select id="add-category" class="select select-bordered select-sm" bind:value={categoryId} onchange={() => categoryAuto = false}>
 					<option value={null} disabled>選擇分類</option>
 					{#each categories as group}
 						<optgroup label={group.name}>
@@ -170,7 +180,7 @@
 						<Icon icon={icons.receipt} class="text-base opacity-60" />明細
 					</span>
 				</label>
-				<input id="add-detail" type="text" class="input input-bordered input-sm" bind:value={detail} placeholder="例：全聯買菜" />
+				<input id="add-detail" type="text" class="input input-bordered input-sm" bind:value={detail} onblur={lookupCategory} placeholder="例：全聯買菜" />
 			</div>
 
 			<div class="form-control mb-2">
