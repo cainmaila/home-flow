@@ -1,7 +1,5 @@
 # Architecture — home-flow
 
-> Auto-generated from GitNexus knowledge graph (490 symbols, 768 relationships, 28 execution flows).
-
 ## Overview
 
 **home-flow** is a household expense tracking app. Users import CSV bank statements, the system parses and categorizes transactions (with AI-assisted suggestions via Gemini), and provides monthly reports with charts.
