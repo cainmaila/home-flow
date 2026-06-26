@@ -36,8 +36,8 @@
 				fetch('/api/categories/manage'),
 				fetch('/api/payment-methods')
 			]);
-			if (!instRes.ok) { error = '載入失敗'; return; }
-			installments = await instRes.json();
+			if (instRes.ok) installments = await instRes.json();
+			else error = '分期資料載入失敗';
 			if (catRes.ok) categories = await catRes.json();
 			if (pmRes.ok) paymentMethods = await pmRes.json();
 		} catch { error = '網路錯誤'; }
