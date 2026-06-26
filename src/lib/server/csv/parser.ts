@@ -97,18 +97,26 @@ export interface ParseResult {
  * @param csv  Raw CSV string
  * @param year Year to apply to M/D dates
  */
+/** Find first row (index 0-2) where ≥1 cell after col 0 parses as M/D date. Returns -1 if none. */
+export function findHeaderRow(lines: string[], year: number): number {
+	for (let i = 0; i < Math.min(lines.length, 3); i++) {
+		if (parseCSVRow(lines[i]).slice(1).some((c) => parseMDDate(c.trim(), year) !== null)) return i;
+	}
+	return -1;
+}
+
 export function parseCSV(csv: string, year: number): ParseResult {
 	const lines = csv.split(/\r?\n/);
 	if (lines.length < 3) {
 		return { records: [], dateHeaders: [], categoryTotals: new Map() };
 	}
 
-	// Row 0: skip (junk)
-	// Row 1: date headers
-	const headerCells = parseCSVRow(lines[1]);
+	const headerRowIdx = findHeaderRow(lines, year);
+	if (headerRowIdx === -1) return { records: [], dateHeaders: [], categoryTotals: new Map() };
+
+	const headerCells = parseCSVRow(lines[headerRowIdx]);
 
 	// Find date columns: indices where the header parses as M/D
-	// First cell (index 0) is label/empty, last cell with no valid date is the total column
 	const dateIndices: number[] = [];
 	const dateHeaders: string[] = [];
 
@@ -123,8 +131,8 @@ export function parseCSV(csv: string, year: number): ParseResult {
 	const records: ParsedRecord[] = [];
 	const categoryTotals = new Map<string, { declared: number; computed: number }>();
 
-	// Parse data rows starting from row 2
-	for (let r = 2; r < lines.length; r++) {
+	// Parse data rows starting after header row
+	for (let r = headerRowIdx + 1; r < lines.length; r++) {
 		const line = lines[r].trim();
 		if (!line) continue;
 

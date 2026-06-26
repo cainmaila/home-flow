@@ -1,6 +1,7 @@
 import {
 	parseCSV,
 	parseCSVWithMapping,
+	findHeaderRow,
 	_parseCSVRow as parseCSVRow,
 	_parseMDDate as parseMDDate,
 	type ParsedRecord,
@@ -86,24 +87,30 @@ export function parseAndValidate(csv: string, year: number): ValidationResult {
 		return { records: [], errors, format: 'transposed' };
 	}
 
-	// Validate date headers (row 1) before full parse
-	const headerCells = parseCSVRow(lines[1]);
+	const headerRowIdx = findHeaderRow(lines, year);
+	if (headerRowIdx === -1) {
+		errors.push({ severity: 'blocking', message: 'No date headers found in first 5 rows' });
+		return { records: [], errors, format: 'transposed' };
+	}
+
+	// Validate date headers before full parse
+	const headerCells = parseCSVRow(lines[headerRowIdx]);
 	const seenDates = new Set<string>();
 	for (let i = 1; i < headerCells.length - 1; i++) {
 		const cell = headerCells[i].trim();
 		if (!cell) continue;
 		const iso = parseMDDate(cell, year);
 		if (!iso) {
-			errors.push({ severity: 'blocking', row: 2, column: i, message: `Bad date header: "${cell}"` });
+			errors.push({ severity: 'blocking', row: headerRowIdx + 1, column: i, message: `Bad date header: "${cell}"` });
 		} else if (seenDates.has(iso)) {
-			errors.push({ severity: 'warning', row: 2, column: i, message: `Duplicate date header: ${iso}` });
+			errors.push({ severity: 'warning', row: headerRowIdx + 1, column: i, message: `Duplicate date header: ${iso}` });
 		} else {
 			seenDates.add(iso);
 		}
 	}
 
-	// Validate data rows (row 2+) for empty categories and bad amounts
-	for (let r = 2; r < lines.length; r++) {
+	// Validate data rows for empty categories and bad amounts
+	for (let r = headerRowIdx + 1; r < lines.length; r++) {
 		const line = lines[r].trim();
 		if (!line) continue;
 		const cells = parseCSVRow(lines[r]);
