@@ -3,7 +3,6 @@
 	import { icons } from '$lib/icons';
 	import type { CategoryParent, Installment } from '$lib/types';
 	import { formatAmount } from '$lib/utils';
-	import CategoryPicker from '$lib/components/CategoryPicker.svelte';
 	import PaymentMethodPicker from '$lib/components/PaymentMethodPicker.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 
@@ -237,17 +236,19 @@
 				<input class="input input-bordered" type="month" bind:value={formStartMonth} />
 			</label>
 
-			<div class="form-control w-full">
+			<label class="form-control w-full">
 				<div class="label"><span class="label-text">分類</span></div>
-				<CategoryPicker
-					{categories}
-					selectedId={formCategoryId}
-					placeholder="未分類"
-					allowClear
-					onselect={(id) => (formCategoryId = id)}
-					onclear={() => (formCategoryId = null)}
-				/>
-			</div>
+				<select class="select select-bordered" bind:value={formCategoryId}>
+					<option value={null}>未分類</option>
+					{#each categories as group}
+						<optgroup label={group.name}>
+							{#each group.children as child}
+								<option value={child.id}>{child.name}</option>
+							{/each}
+						</optgroup>
+					{/each}
+				</select>
+			</label>
 
 			<label class="form-control w-full">
 				<div class="label"><span class="label-text">明細備註</span></div>
