@@ -59,24 +59,34 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 	const paymentMethod = body.payment_method?.trim().slice(0, 20) || '現金';
 	const detail = body.detail?.trim().slice(0, 200) || null;
 
-	await db
-		.prepare(
-			`INSERT INTO installments (id, household_id, total_amount, periods, start_month, category_id, detail, payment_method)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-		)
-		.bind(id, HOUSEHOLD_ID, body.total_amount, body.periods, body.start_month, body.category_id ?? null, detail, paymentMethod)
-		.run();
+	try {
+		await db
+			.prepare(
+				`INSERT INTO installments (id, household_id, total_amount, periods, start_month, category_id, detail, payment_method)
+				 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+			)
+			.bind(id, HOUSEHOLD_ID, body.total_amount, body.periods, body.start_month, body.category_id ?? null, detail, paymentMethod)
+			.run();
+	} catch (e) {
+		console.error('[installments POST] INSERT installment failed:', e);
+		throw error(500, `新增分期失敗: ${e instanceof Error ? e.message : String(e)}`);
+	}
 
-	await rebuildInstallmentExpenses(db, HOUSEHOLD_ID, {
-		id,
-		household_id: HOUSEHOLD_ID,
-		total_amount: body.total_amount,
-		periods: body.periods,
-		start_month: body.start_month,
-		category_id: body.category_id ?? null,
-		detail,
-		payment_method: paymentMethod
-	});
+	try {
+		await rebuildInstallmentExpenses(db, HOUSEHOLD_ID, {
+			id,
+			household_id: HOUSEHOLD_ID,
+			total_amount: body.total_amount,
+			periods: body.periods,
+			start_month: body.start_month,
+			category_id: body.category_id ?? null,
+			detail,
+			payment_method: paymentMethod
+		});
+	} catch (e) {
+		console.error('[installments POST] rebuildInstallmentExpenses failed:', e);
+		throw error(500, `建立分期明細失敗: ${e instanceof Error ? e.message : String(e)}`);
+	}
 
 	return json({ id });
 };

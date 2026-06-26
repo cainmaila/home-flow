@@ -15,7 +15,6 @@
 	let saving = $state(false);
 
 	// Form state (shared for add & edit)
-	let formOpen = $state(false);
 	let editingId: string | null = $state(null);
 	let formTotalAmount = $state('');
 	let formPeriods = $state('');
@@ -61,7 +60,6 @@
 		formCategoryId = null;
 		formDetail = '';
 		formPaymentMethod = '現金';
-		formOpen = true;
 		dialogEl?.showModal();
 	}
 
@@ -73,12 +71,10 @@
 		formCategoryId = inst.category_id;
 		formDetail = inst.detail ?? '';
 		formPaymentMethod = inst.payment_method;
-		formOpen = true;
 		dialogEl?.showModal();
 	}
 
 	function closeModal() {
-		formOpen = false;
 		dialogEl?.close();
 	}
 

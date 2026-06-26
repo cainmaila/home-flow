@@ -32,29 +32,31 @@ export async function rebuildInstallmentExpenses(
 	inst: Installment
 ): Promise<void> {
 	const amounts = splitAmount(inst.total_amount, inst.periods);
-	await db.batch([
+	const insertSql = `INSERT INTO expenses (id, household_id, expense_date, raw_category, category_id, amount, detail, payment_method, installment_id)
+		VALUES (?, ?, ?, '分期付款', ?, ?, ?, ?, ?)`;
+	const stmts = [
 		db
 			.prepare(
 				'DELETE FROM expense_tags WHERE expense_id IN (SELECT id FROM expenses WHERE installment_id = ?)'
 			)
 			.bind(inst.id),
-		db.prepare('DELETE FROM expenses WHERE installment_id = ?').bind(inst.id),
-		...amounts.map((amount, i) =>
+		db.prepare('DELETE FROM expenses WHERE installment_id = ?').bind(inst.id)
+	];
+	for (let i = 0; i < amounts.length; i++) {
+		stmts.push(
 			db
-				.prepare(
-					`INSERT INTO expenses (id, household_id, expense_date, raw_category, category_id, amount, detail, payment_method, installment_id)
-           VALUES (?, ?, ?, '分期付款', ?, ?, ?, ?, ?)`
-				)
+				.prepare(insertSql)
 				.bind(
 					crypto.randomUUID(),
 					householdId,
 					addMonths(inst.start_month, i),
 					inst.category_id ?? null,
-					amount,
+					amounts[i],
 					inst.detail,
 					inst.payment_method,
 					inst.id
 				)
-		)
-	]);
+		);
+	}
+	await db.batch(stmts);
 }
