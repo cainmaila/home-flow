@@ -28,4 +28,18 @@ export interface Expense {
 	detail?: string | null;
 	tags?: string[];
 	payment_method?: string;
+	installment_id?: string | null;
+}
+
+export interface Installment {
+	id: string;
+	total_amount: number;
+	periods: number;
+	start_month: string;
+	category_id: number | null;
+	category_name: string | null;
+	parent_category_name: string | null;
+	detail: string | null;
+	payment_method: string;
+	created_at: string;
 }

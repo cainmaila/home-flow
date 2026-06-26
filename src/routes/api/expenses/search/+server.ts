@@ -83,7 +83,7 @@ export const GET: RequestHandler = async ({ platform, locals, url }) => {
 	const rows = await db
 		.prepare(
 			`SELECT e.id, e.expense_date, e.raw_category, e.category_id, e.amount,
-			        e.detail, e.payment_method,
+			        e.detail, e.payment_method, e.installment_id,
 			        COALESCE(c.name, e.raw_category) as category_name,
 			        p.name as parent_category_name,
 			        (SELECT GROUP_CONCAT(t.name) FROM expense_tags et JOIN tags t ON et.tag_id = t.id WHERE et.expense_id = e.id) as tag_names
@@ -102,6 +102,7 @@ export const GET: RequestHandler = async ({ platform, locals, url }) => {
 			amount: number;
 			detail: string | null;
 			payment_method: string;
+			installment_id: string | null;
 			category_name: string;
 			parent_category_name: string | null;
 			tag_names: string | null;
@@ -118,6 +119,7 @@ export const GET: RequestHandler = async ({ platform, locals, url }) => {
 		amount: r.amount,
 		detail: r.detail,
 		payment_method: r.payment_method,
+		installment_id: r.installment_id,
 		tags: r.tag_names ? r.tag_names.split(',') : []
 	}));
 

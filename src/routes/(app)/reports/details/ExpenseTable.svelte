@@ -209,14 +209,14 @@
 								<td>
 									<input type="checkbox" class="checkbox checkbox-xs" checked={selected.has(exp.id)} onchange={() => (selected.has(exp.id) ? selected.delete(exp.id) : selected.add(exp.id))} aria-label="選取" />
 								</td>
-								<td class="cursor-pointer" onclick={() => startCell(exp, 'date')}>
+								<td class="cursor-pointer" onclick={() => !exp.installment_id && startCell(exp, 'date')}>
 									{#if editing?.id === exp.id && editing.field === 'date'}
 										<input use:focusOnMount type="date" class="input input-bordered input-xs w-36" bind:value={editValue} onkeydown={(e) => cellKeydown(e, exp)} onblur={() => commitCell(exp)} />
 									{:else}
 										<span class="tabular-nums text-base-content/70">{exp.expense_date}</span>
 									{/if}
 								</td>
-								<td class="cursor-pointer" onclick={() => { if (editing?.id !== exp.id || editing.field !== 'category') startCell(exp, 'category'); }}>
+								<td class="cursor-pointer" onclick={() => { if (!exp.installment_id && (editing?.id !== exp.id || editing.field !== 'category')) startCell(exp, 'category'); }}>
 									{#if editing?.id === exp.id && editing.field === 'category'}
 										<CategoryPicker
 											{categories}
@@ -244,28 +244,33 @@
 										{/if}
 									{/if}
 								</td>
-								<td class="cursor-pointer" onclick={() => startCell(exp, 'detail')}>
+								<td class="cursor-pointer" onclick={() => !exp.installment_id && startCell(exp, 'detail')}>
 									{#if editing?.id === exp.id && editing.field === 'detail'}
 										<input use:focusOnMount type="text" class="input input-bordered input-xs w-32" bind:value={editValue} onkeydown={(e) => cellKeydown(e, exp)} onblur={() => commitCell(exp)} placeholder="明細" />
 									{:else}
-										<span class="text-sm text-base-content/70">{exp.detail ?? ''}</span>
+										<span class="text-sm text-base-content/70">
+											{exp.detail ?? ''}
+											{#if exp.installment_id}
+												<span class="badge badge-info badge-xs ml-1">分期</span>
+											{/if}
+										</span>
 									{/if}
 								</td>
-								<td class="cursor-pointer" onclick={() => startCell(exp, 'amount')}>
+								<td class="cursor-pointer" onclick={() => !exp.installment_id && startCell(exp, 'amount')}>
 									{#if editing?.id === exp.id && editing.field === 'amount'}
 										<input use:focusOnMount type="number" class="input input-bordered input-xs w-24 text-right" bind:value={editValue} onkeydown={(e) => cellKeydown(e, exp)} onblur={() => commitCell(exp)} />
 									{:else}
 										<span class="text-right tabular-nums font-semibold">{formatAmount(exp.amount)}</span>
 									{/if}
 								</td>
-								<td class="cursor-pointer" onclick={() => { if (editing?.id !== exp.id || editing.field !== 'payment') startCell(exp, 'payment'); }}>
+								<td class="cursor-pointer" onclick={() => { if (!exp.installment_id && (editing?.id !== exp.id || editing.field !== 'payment')) startCell(exp, 'payment'); }}>
 									{#if editing?.id === exp.id && editing.field === 'payment'}
 										<PaymentMethodPicker methods={paymentMethods} value={editValue} size="xs" onselect={(name) => commitPayment(exp.id, name)} />
 									{:else}
 										<Tag label={exp.payment_method ?? '現金'} color={tagColor(exp.payment_method ?? '現金')} variant="filled" size="xs" />
 									{/if}
 								</td>
-								<td class="cursor-pointer" onclick={() => startCell(exp, 'tags')}>
+								<td class="cursor-pointer" onclick={() => !exp.installment_id && startCell(exp, 'tags')}>
 									{#if editing?.id === exp.id && editing.field === 'tags'}
 										<input use:focusOnMount type="text" class="input input-bordered input-xs w-32" bind:value={editValue} onkeydown={(e) => cellKeydown(e, exp)} onblur={() => commitCell(exp)} placeholder="逗號分隔" list="tag-options" />
 									{:else}
@@ -273,7 +278,11 @@
 									{/if}
 								</td>
 								<td class="opacity-0 group-hover:opacity-100 transition-opacity">
-									<button class="btn btn-ghost btn-xs gap-0.5 text-error" onclick={() => confirmDelete(exp.id)}><Icon icon={icons.delete} class="text-sm" />刪除</button>
+									{#if exp.installment_id}
+										<a href="/settings/installments" class="btn btn-ghost btn-xs gap-0.5 text-info">分期設定</a>
+									{:else}
+										<button class="btn btn-ghost btn-xs gap-0.5 text-error" onclick={() => confirmDelete(exp.id)}><Icon icon={icons.delete} class="text-sm" />刪除</button>
+									{/if}
 								</td>
 							</tr>
 						{/each}

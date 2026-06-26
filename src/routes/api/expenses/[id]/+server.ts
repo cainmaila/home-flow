@@ -11,10 +11,11 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
 	if (!db) throw error(500, 'Database not available');
 
 	const expense = await db
-		.prepare('SELECT id FROM expenses WHERE id = ? AND household_id = ?')
+		.prepare('SELECT id, installment_id FROM expenses WHERE id = ? AND household_id = ?')
 		.bind(params.id, HOUSEHOLD_ID)
-		.first();
+		.first<{ id: string; installment_id: string | null }>();
 	if (!expense) throw error(404, 'Expense not found');
+	if (expense.installment_id) throw error(409, '分期交易不可單獨修改，請至分期付款設定頁調整');
 
 	const body = (await request.json()) as {
 		expense_date?: string;
@@ -80,10 +81,11 @@ export const DELETE: RequestHandler = async ({ params, locals, platform }) => {
 	if (!db) throw error(500, 'Database not available');
 
 	const expense = await db
-		.prepare('SELECT id FROM expenses WHERE id = ? AND household_id = ?')
+		.prepare('SELECT id, installment_id FROM expenses WHERE id = ? AND household_id = ?')
 		.bind(params.id, HOUSEHOLD_ID)
-		.first();
+		.first<{ id: string; installment_id: string | null }>();
 	if (!expense) throw error(404, 'Expense not found');
+	if (expense.installment_id) throw error(409, '分期交易不可單獨刪除，請至分期付款設定頁調整');
 
 	await db.batch([
 		db.prepare('DELETE FROM expense_tags WHERE expense_id = ?').bind(params.id),

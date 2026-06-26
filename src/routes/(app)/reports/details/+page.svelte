@@ -120,7 +120,7 @@
 			const results = await Promise.all(
 				[...selected].map((id) => {
 					const exp = expenses.find((e) => e.id === id);
-					if (!exp) return Promise.resolve(null);
+					if (!exp || exp.installment_id) return Promise.resolve(null);
 					return fetch(`/api/expenses/${id}`, {
 						method: 'PUT',
 						headers: { 'Content-Type': 'application/json' },
@@ -143,7 +143,9 @@
 		saving = true;
 		try {
 			const results = await Promise.all(
-				[...selected].map((id) => fetch(`/api/expenses/${id}`, { method: 'DELETE' }))
+				[...selected]
+					.filter((id) => !expenses.find((e) => e.id === id)?.installment_id)
+					.map((id) => fetch(`/api/expenses/${id}`, { method: 'DELETE' }))
 			);
 			const failed = results.filter((r) => !r.ok).length;
 			if (failed) alert(`${failed} 筆刪除失敗`);

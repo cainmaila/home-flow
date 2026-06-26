@@ -39,6 +39,7 @@ export const icons = {
 		history: 'mdi:history',
 		categories: 'mdi:folder-multiple-outline',
 		payments: 'mdi:credit-card-outline',
+		installments: 'mdi:credit-card-clock-outline',
 	},
 } as const;
 

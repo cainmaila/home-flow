@@ -12,7 +12,8 @@
 		{ href: '/corrections', label: '校正', icon: icons.nav.corrections },
 		{ href: '/import/history', label: '歷程', icon: icons.nav.history },
 		{ href: '/settings/categories', label: '分類', icon: icons.nav.categories },
-		{ href: '/settings/payments', label: '付款', icon: icons.nav.payments }
+		{ href: '/settings/payments', label: '付款', icon: icons.nav.payments },
+		{ href: '/settings/installments', label: '分期', icon: icons.nav.installments }
 	];
 
 	const activeCls = (href: string) =>
