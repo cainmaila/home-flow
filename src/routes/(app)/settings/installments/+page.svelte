@@ -184,20 +184,19 @@
 									<span class="badge badge-neutral badge-sm">{inst.periods} 期</span>
 									<span class="badge badge-outline badge-sm">每期 {formatAmount(Math.floor(inst.total_amount / inst.periods))} 元</span>
 								</div>
-								<div class="text-sm text-base-content/60 flex flex-wrap gap-3">
-									<span>起始：{inst.start_month}</span>
-									<span>結束：{(() => {
+								{#if inst.detail}
+									<div class="text-base font-medium text-base-content/90">{inst.detail}</div>
+								{/if}
+								<div class="text-sm text-base-content/60 flex flex-wrap items-center gap-x-2 gap-y-1">
+									<span>起始 {inst.start_month} → {(() => {
 										const [y, m] = inst.start_month.split('-').map(Number);
 										const end = new Date(y, m - 1 + inst.periods - 1, 1);
 										return `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}`;
 									})()}</span>
-									{#if inst.detail}<span>備註：{inst.detail}</span>{/if}
 									{#if inst.category_name}
-										<span>
-											{#if inst.parent_category_name}<span class="text-base-content/45">{inst.parent_category_name} › </span>{/if}{inst.category_name}
-										</span>
+										<span>· {#if inst.parent_category_name}<span class="text-base-content/45">{inst.parent_category_name} › </span>{/if}{inst.category_name}</span>
 									{/if}
-									<span>付款：{inst.payment_method}</span>
+									<span>· 付款 {inst.payment_method}</span>
 								</div>
 								{#if inst.tags && inst.tags.length > 0}
 									<div class="flex flex-wrap gap-1 mt-1">
