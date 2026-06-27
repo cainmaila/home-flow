@@ -5,10 +5,13 @@
 	import { formatAmount } from '$lib/utils';
 	import PaymentMethodPicker from '$lib/components/PaymentMethodPicker.svelte';
 	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
+	import Tag from '$lib/components/Tag.svelte';
+	import { tagColor } from '$lib/tagColor';
 
 	let installments: Installment[] = $state([]);
 	let categories: CategoryParent[] = $state([]);
 	let paymentMethods: { id: number; name: string }[] = $state([]);
+	let availableTags: { id: number; name: string }[] = $state([]);
 	let loading = $state(true);
 	let error = $state('');
 	let success = $state('');
@@ -21,6 +24,7 @@
 	let formStartMonth = $state('');
 	let formCategoryId = $state<number | null>(null);
 	let formDetail = $state('');
+	let formTags = $state('');
 	let formPaymentMethod = $state('現金');
 
 	let dialogEl: HTMLDialogElement | undefined = $state(undefined);
@@ -30,15 +34,17 @@
 		loading = true;
 		error = '';
 		try {
-			const [instRes, catRes, pmRes] = await Promise.all([
+			const [instRes, catRes, pmRes, tagsRes] = await Promise.all([
 				fetch('/api/installments'),
 				fetch('/api/categories/manage'),
-				fetch('/api/payment-methods')
+				fetch('/api/payment-methods'),
+				fetch('/api/tags')
 			]);
 			if (instRes.ok) installments = await instRes.json();
 			else error = '分期資料載入失敗';
 			if (catRes.ok) categories = await catRes.json();
 			if (pmRes.ok) paymentMethods = await pmRes.json();
+			if (tagsRes.ok) availableTags = await tagsRes.json();
 		} catch { error = '網路錯誤'; }
 		finally { loading = false; }
 	}
@@ -59,6 +65,7 @@
 		formStartMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 		formCategoryId = null;
 		formDetail = '';
+		formTags = '';
 		formPaymentMethod = '現金';
 		dialogEl?.showModal();
 	}
@@ -70,6 +77,7 @@
 		formStartMonth = inst.start_month;
 		formCategoryId = inst.category_id;
 		formDetail = inst.detail ?? '';
+		formTags = (inst.tags ?? []).join(',');
 		formPaymentMethod = inst.payment_method;
 		dialogEl?.showModal();
 	}
@@ -99,6 +107,7 @@
 				start_month: formStartMonth,
 				category_id: formCategoryId,
 				detail: formDetail.trim() || undefined,
+				tags: formTags.split(',').map((t: string) => t.trim()).filter(Boolean),
 				payment_method: formPaymentMethod
 			};
 
@@ -190,6 +199,13 @@
 									{/if}
 									<span>付款：{inst.payment_method}</span>
 								</div>
+								{#if inst.tags && inst.tags.length > 0}
+									<div class="flex flex-wrap gap-1 mt-1">
+										{#each inst.tags as tag}
+											<Tag label={tag} color={tagColor(tag)} variant="outline" size="xs" />
+										{/each}
+									</div>
+								{/if}
 							</div>
 							<div class="flex gap-1 shrink-0">
 								<button class="btn btn-ghost btn-sm gap-0.5" onclick={() => openEdit(inst)}>
@@ -250,6 +266,16 @@
 				<div class="label"><span class="label-text">明細備註</span></div>
 				<input class="input input-bordered" type="text" maxlength="200" placeholder="如：iPhone 24期分期" bind:value={formDetail} />
 			</label>
+
+			<div class="form-control w-full">
+				<div class="label"><span class="label-text">標籤</span></div>
+				<input class="input input-bordered input-sm" type="text" bind:value={formTags} placeholder="逗號分隔，例：老婆,3C" list="inst-tag-options" />
+				<datalist id="inst-tag-options">
+					{#each availableTags as tag}
+						<option value={tag.name}></option>
+					{/each}
+				</datalist>
+			</div>
 
 			<div class="form-control w-full">
 				<div class="label"><span class="label-text">付款方式</span></div>

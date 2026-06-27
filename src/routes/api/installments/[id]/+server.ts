@@ -13,6 +13,7 @@ type InstRow = {
 	start_month: string;
 	category_id: number | null;
 	detail: string | null;
+	tags: string | null;
 	payment_method: string;
 };
 
@@ -33,6 +34,7 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
 		start_month?: string;
 		category_id?: number | null;
 		detail?: string | null;
+		tags?: string[];
 		payment_method?: string;
 	};
 
@@ -43,6 +45,7 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
 	if (body.start_month !== undefined && !/^\d{4}-\d{2}$/.test(body.start_month))
 		throw error(400, 'Invalid start_month');
 
+	const updatedTags = body.tags !== undefined ? body.tags : (inst.tags ? inst.tags.split(',') : []);
 	const updated: InstRow = {
 		...inst,
 		total_amount: body.total_amount ?? inst.total_amount,
@@ -50,18 +53,19 @@ export const PUT: RequestHandler = async ({ params, request, locals, platform })
 		start_month: body.start_month ?? inst.start_month,
 		category_id: body.category_id !== undefined ? body.category_id : inst.category_id,
 		detail: body.detail !== undefined ? (body.detail?.trim().slice(0, 200) || null) : inst.detail,
+		tags: updatedTags.length ? updatedTags.join(',') : null,
 		payment_method: body.payment_method?.trim().slice(0, 20) || inst.payment_method
 	};
 
 	await db
 		.prepare(
-			`UPDATE installments SET total_amount=?, periods=?, start_month=?, category_id=?, detail=?, payment_method=?, updated_at=datetime('now')
+			`UPDATE installments SET total_amount=?, periods=?, start_month=?, category_id=?, detail=?, tags=?, payment_method=?, updated_at=datetime('now')
 			 WHERE id = ? AND household_id = ?`
 		)
-		.bind(updated.total_amount, updated.periods, updated.start_month, updated.category_id, updated.detail, updated.payment_method, params.id, HOUSEHOLD_ID)
+		.bind(updated.total_amount, updated.periods, updated.start_month, updated.category_id, updated.detail, updated.tags, updated.payment_method, params.id, HOUSEHOLD_ID)
 		.run();
 
-	await rebuildInstallmentExpenses(db, HOUSEHOLD_ID, updated);
+	await rebuildInstallmentExpenses(db, HOUSEHOLD_ID, { ...updated, tags: updatedTags });
 
 	return json({ ok: true });
 };

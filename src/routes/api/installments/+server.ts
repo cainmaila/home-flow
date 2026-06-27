@@ -13,7 +13,7 @@ export const GET: RequestHandler = async ({ locals, platform }) => {
 	const rows = await db
 		.prepare(
 			`SELECT i.id, i.total_amount, i.periods, i.start_month, i.category_id,
-			        i.detail, i.payment_method, i.created_at,
+			        i.detail, i.tags, i.payment_method, i.created_at,
 			        c.name as category_name, p.name as parent_category_name
 			 FROM installments i
 			 LEFT JOIN categories c ON i.category_id = c.id
@@ -22,9 +22,9 @@ export const GET: RequestHandler = async ({ locals, platform }) => {
 			 ORDER BY i.created_at DESC`
 		)
 		.bind(HOUSEHOLD_ID)
-		.all();
+		.all<Record<string, unknown>>();
 
-	return json(rows.results);
+	return json(rows.results.map((r) => ({ ...r, tags: r.tags ? (r.tags as string).split(',') : [] })));
 };
 
 export const POST: RequestHandler = async ({ request, locals, platform }) => {
@@ -38,6 +38,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 		start_month: string;
 		category_id?: number | null;
 		detail?: string;
+		tags?: string[];
 		payment_method?: string;
 	};
 
@@ -58,14 +59,15 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 	const id = crypto.randomUUID();
 	const paymentMethod = body.payment_method?.trim().slice(0, 20) || '現金';
 	const detail = body.detail?.trim().slice(0, 200) || null;
+	const tags = Array.isArray(body.tags) ? body.tags : [];
 
 	try {
 		await db
 			.prepare(
-				`INSERT INTO installments (id, household_id, total_amount, periods, start_month, category_id, detail, payment_method)
-				 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+				`INSERT INTO installments (id, household_id, total_amount, periods, start_month, category_id, detail, tags, payment_method)
+				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 			)
-			.bind(id, HOUSEHOLD_ID, body.total_amount, body.periods, body.start_month, body.category_id ?? null, detail, paymentMethod)
+			.bind(id, HOUSEHOLD_ID, body.total_amount, body.periods, body.start_month, body.category_id ?? null, detail, tags.length ? tags.join(',') : null, paymentMethod)
 			.run();
 	} catch (e) {
 		console.error('[installments POST] INSERT installment failed:', e);
@@ -81,6 +83,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 			start_month: body.start_month,
 			category_id: body.category_id ?? null,
 			detail,
+			tags,
 			payment_method: paymentMethod
 		});
 	} catch (e) {

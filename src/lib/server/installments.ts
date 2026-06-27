@@ -1,4 +1,5 @@
 import type { D1Database } from '@cloudflare/workers-types';
+import { cleanTagNames } from './tags';
 
 export interface Installment {
 	id: string;
@@ -8,6 +9,7 @@ export interface Installment {
 	start_month: string;
 	category_id: number | null;
 	detail: string | null;
+	tags: string[];
 	payment_method: string;
 }
 
@@ -34,7 +36,7 @@ export async function rebuildInstallmentExpenses(
 	const amounts = splitAmount(inst.total_amount, inst.periods);
 	const insertSql = `INSERT INTO expenses (id, household_id, expense_date, raw_category, category_id, amount, detail, payment_method, installment_id)
 		VALUES (?, ?, ?, '分期付款', ?, ?, ?, ?, ?)`;
-	const stmts = [
+	const stmts: D1PreparedStatement[] = [
 		db
 			.prepare(
 				'DELETE FROM expense_tags WHERE expense_id IN (SELECT id FROM expenses WHERE installment_id = ?)'
@@ -56,6 +58,24 @@ export async function rebuildInstallmentExpenses(
 					inst.payment_method,
 					inst.id
 				)
+		);
+	}
+	const tags = cleanTagNames(inst.tags ?? []);
+	if (tags.length > 0) {
+		const ph = tags.map(() => '?').join(',');
+		for (const name of tags) {
+			stmts.push(
+				db.prepare('INSERT OR IGNORE INTO tags (household_id, name) VALUES (?, ?)').bind(householdId, name)
+			);
+		}
+		stmts.push(
+			db
+				.prepare(
+					`INSERT INTO expense_tags (expense_id, tag_id)
+					 SELECT e.id, t.id FROM expenses e, tags t
+					 WHERE e.installment_id = ? AND t.household_id = ? AND t.name IN (${ph})`
+				)
+				.bind(inst.id, householdId, ...tags)
 		);
 	}
 	await db.batch(stmts);

@@ -40,6 +40,7 @@ export interface Installment {
 	category_name: string | null;
 	parent_category_name: string | null;
 	detail: string | null;
+	tags?: string[];
 	payment_method: string;
 	created_at: string;
 }

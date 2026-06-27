@@ -1,19 +1,19 @@
 const MAX_TAG_LENGTH = 20;
 const MAX_TAGS_PER_EXPENSE = 10;
 
+export function cleanTagNames(names: string[]): string[] {
+	return [
+		...new Set(names.map((t) => t.trim().slice(0, MAX_TAG_LENGTH)).filter((t) => t.length > 0))
+	].slice(0, MAX_TAGS_PER_EXPENSE);
+}
+
 export async function setExpenseTags(
 	db: D1Database,
 	householdId: string,
 	expenseId: string,
 	tagNames: string[]
 ): Promise<void> {
-	const cleaned = [
-		...new Set(
-			tagNames
-				.map((t) => t.trim().slice(0, MAX_TAG_LENGTH))
-				.filter((t) => t.length > 0)
-		)
-	].slice(0, MAX_TAGS_PER_EXPENSE);
+	const cleaned = cleanTagNames(tagNames);
 
 	await db.prepare('DELETE FROM expense_tags WHERE expense_id = ?').bind(expenseId).run();
 
